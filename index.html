@@ -434,6 +434,8 @@ var I18N_EXACT = {
   "آخر فحوصات لهذه السيارة (كمرجع)": "Recent inspections for this car (for reference)",
   "المكان": "Location",
   "رمز السيارة": "Car Code",
+  "عداد السيارة الحالي": "Current Odometer",
+  "عداد السيارة": "Odometer",
   "التاريخ والوقت": "Date & Time",
   "رمز الفاحص": "Inspector Code",
   "الفاحص": "Inspector",
@@ -675,6 +677,7 @@ var state = {
 function freshDraft() {
   return {
     carCode: "",
+    odometer: "",
     driver: "",
     pinTry: "", pinError: "", pinVerified: false, rememberPin: false,
     driverConfirmedAt: "",
@@ -817,6 +820,7 @@ function renderReport(record) {
 
     '<div class="vi-info-grid" style="display:grid;grid-template-columns:1fr;gap:0 20px;margin-bottom:6px;">' +
     cell("رمز السيارة", record.carCode) +
+    cell("عداد السيارة", record.odometer) +
     cell("الفاحص", record.driver) +
     cell("المكان", placeLine, true) +
     cell("تاريخ الفحص", formatDateOnly(record.dateTime)) +
@@ -1144,6 +1148,8 @@ function renderNew() {
     '<div style="display:flex;gap:8px;"><input class="input" data-field="carCode" list="dl-carCode" inputmode="numeric" pattern="[0-9]*" placeholder="مثال: 22721" value="' + escapeHtml(d.carCode) + '" style="flex:1;" />' +
     '<button type="button" class="btn-secondary" data-action="lookup-past" style="white-space:nowrap;padding:10px 12px;">🔍 فحوصات سابقة</button></div>' +
     '<datalist id="dl-carCode">' + getVehicles().map(function (v) { return '<option value="' + escapeHtml(v) + '"></option>'; }).join("") + "</datalist></div>" +
+    '<div style="margin-bottom:10px;"><label class="label">عداد السيارة الحالي</label>' +
+    '<input class="input" data-field="odometer" inputmode="numeric" pattern="[0-9]*" placeholder="مثال: 154200" value="' + escapeHtml(d.odometer || "") + '" /></div>' +
     renderDriverIdentityBlock() +
     "</div>" +
 
@@ -1195,7 +1201,7 @@ function renderDetail() {
     '<span style="color:#FFFFFF;font-size:12px;font-weight:600;">طباعة</span></button></div>' +
 
     '<div style="padding:0 18px;">' +
-    '<div class="section"><div class="section-title">بيانات الفحص</div>' + row("رمز السيارة", record.carCode) + row("الفاحص", record.driver) + row("المكان", placeLine) + row("التاريخ والوقت", formatDT(record.dateTime)) + "</div>" +
+    '<div class="section"><div class="section-title">بيانات الفحص</div>' + row("رمز السيارة", record.carCode) + row("عداد السيارة", record.odometer) + row("الفاحص", record.driver) + row("المكان", placeLine) + row("التاريخ والوقت", formatDT(record.dateTime)) + "</div>" +
     '<div class="section"><div class="section-title">حالة الهيكل</div>' + renderLegend() + renderCarDiagram(damages, { editable: false, theme: "dark" }) + damagesHtml + "</div>" +
     '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div><div style="color:' + (record.mechanicNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div></div>" +
     '<div class="section"><div class="section-title">التجهيزات</div>' + checklistHtml + (record.otherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.otherText) + "</div>" : "") + "</div>" +
@@ -1348,6 +1354,8 @@ function renderAdminEditReport() {
     '<div class="section"><div class="section-title">بيانات الفحص</div>' +
     '<div style="margin-bottom:10px;"><label class="label">رمز السيارة</label>' +
     '<input class="input" data-field="carCode" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(d.carCode) + '" /></div>' +
+    '<div style="margin-bottom:10px;"><label class="label">عداد السيارة الحالي</label>' +
+    '<input class="input" data-field="odometer" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(d.odometer || "") + '" /></div>' +
     '<div style="background:#1C1C1E;border-radius:10px;padding:10px 12px;color:#8E8E93;font-size:12px;">الفاحص الأصلي: <span style="color:#FFFFFF;">' + escapeHtml(d.driver || "—") + '</span> — ' + formatDT(d.driverConfirmedAt) + "</div>" +
     "</div>" +
     renderInspectionFields(d) +
@@ -1519,6 +1527,7 @@ function loadAdminEditDraft(record) {
   return {
     id: record.id,
     carCode: record.carCode || "",
+    odometer: record.odometer || "",
     driver: record.driver || "",
     driverConfirmedAt: record.driverConfirmedAt || "",
     place: record.place || PLACE_OPTIONS[0],
@@ -1552,6 +1561,7 @@ function saveAdminEditReport() {
   render();
   var updates = {
     carCode: d.carCode.trim(),
+    odometer: (d.odometer || "").trim(),
     place: d.place,
     placeNote: d.placeNote.trim(),
     dateTime: d.dateTime,
@@ -1664,6 +1674,7 @@ function undoLastDamage() {
 function buildRecord() {
   return {
     carCode: draft.carCode.trim(),
+    odometer: draft.odometer.trim(),
     driver: draft.driver,
     driverConfirmedAt: draft.driverConfirmedAt,
     place: draft.place,
@@ -1897,6 +1908,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (field === "homeDate") { state.homeDate = t.value; render(); return; }
     if (field === "newVehicleCode") { t.value = t.value.replace(/[^0-9]/g, ""); state.newVehicleCode = t.value; return; }
     if (field === "carCode") { t.value = t.value.replace(/[^0-9]/g, ""); activeDraft().carCode = t.value; return; }
+    if (field === "odometer") { t.value = t.value.replace(/[^0-9]/g, ""); activeDraft().odometer = t.value; return; }
     if (field === "pinTry") {
       t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4);
       draft.pinTry = t.value;
