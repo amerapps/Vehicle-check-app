@@ -117,6 +117,14 @@ var DRIVER_PIN_DEFAULTS = {
 // extended from the "المركبات" (Vehicles) screen)
 var VEHICLE_DEFAULTS = ["17646","22721","22722","22723","22725","22726","22727","22728","22830","22831","22832","22833","22834","22835","22836","22837","22838","22858","22859","22860","23005","23134","60388","60495","60496","15374","17301"];
 
+// Default admin account — seeded into Firestore's "admins" collection the
+// very first time it's empty, so there's always at least one working admin
+// login. This is a SHA-256 hash only, never the plain code. The default
+// code is 9247 — change it (or add a new admin and stop using this one)
+// from the "لوحة الإدارة" (Admin) screen as soon as you log in.
+var DEFAULT_ADMIN_NAME = "المدير";
+var DEFAULT_ADMIN_PIN_HASH = "201b760f28c578dae0ce89542ec6d79bee708372562c7f2f872087e44ebedaf3";
+
 /* =================================================================
    Firebase (shared online database) — every inspector's device reads
    and writes the same "inspections" and "vehicles" collections, so
@@ -141,6 +149,8 @@ var cloudError = null;
 var inspectionsCache = {};   // id -> full record
 var inspectionsIndex = [];   // lightweight list, newest first, for the home/reports screens
 var vehiclesCache = [];      // array of vehicle codes
+var driverPinsCache = {};    // driver name -> pin hash (Firestore-backed, replaces the old localStorage seed)
+var adminsCache = {};        // admin name -> pin hash
 
 function initCloud() {
   if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey.indexOf("PUT-YOUR") === 0) {
@@ -176,6 +186,34 @@ function initCloud() {
         vehiclesCache = snap.docs.map(function (d) { return d.id; });
         render();
       }, function (e) { console.error("vehicles listener:", e); });
+
+      db.collection("driverPins").onSnapshot(function (snap) {
+        if (snap.empty) {
+          var pinBatch = db.batch();
+          DRIVERS.forEach(function (name) {
+            if (DRIVER_PIN_DEFAULTS[name]) {
+              pinBatch.set(db.collection("driverPins").doc(name), { hash: DRIVER_PIN_DEFAULTS[name] });
+            }
+          });
+          pinBatch.commit().catch(function (e) { console.error(e); });
+          return;
+        }
+        var pinCache = {};
+        snap.forEach(function (doc) { pinCache[doc.id] = doc.data().hash; });
+        driverPinsCache = pinCache;
+        render();
+      }, function (e) { console.error("driverPins listener:", e); });
+
+      db.collection("admins").onSnapshot(function (snap) {
+        if (snap.empty) {
+          db.collection("admins").doc(DEFAULT_ADMIN_NAME).set({ hash: DEFAULT_ADMIN_PIN_HASH }).catch(function (e) { console.error(e); });
+          return;
+        }
+        var adminCache = {};
+        snap.forEach(function (doc) { adminCache[doc.id] = doc.data().hash; });
+        adminsCache = adminCache;
+        render();
+      }, function (e) { console.error("admins listener:", e); });
 
       db.collection("inspections").orderBy("dateTime", "desc").onSnapshot(function (snap) {
         var cache = {}, idx = [];
@@ -248,21 +286,10 @@ function datalistHtml(id, key) {
    under a driver name they don't have the code for, on a shared
    phone/tablet.
 ================================================================= */
-function hasPinFor(driver) { return !!lsGet("vi_pin_" + driver, null); }
 function hashPin(pin) {
   var enc = new TextEncoder().encode(pin);
   return crypto.subtle.digest("SHA-256", enc).then(function (buf) {
     return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
-  });
-}
-function seedDriverPins() {
-  // The codes in DRIVER_PIN_DEFAULTS are always the source of truth —
-  // force-sync on every load so a stale locally-saved code can never
-  // silently override the current list in the file.
-  DRIVERS.forEach(function (name) {
-    if (DRIVER_PIN_DEFAULTS[name]) {
-      lsSet("vi_pin_" + name, DRIVER_PIN_DEFAULTS[name]);
-    }
   });
 }
 function randomFourDigitCode() {
@@ -356,7 +383,20 @@ var state = {
   newVehicleCode: "",
   vehicleError: "",
   reportsCarQuery: "",
-  reportsDriverFilter: ""
+  reportsDriverFilter: "",
+  adminUnlocked: false,
+  adminName: "",
+  adminPinTry: "",
+  adminPinError: "",
+  adminEditDriverName: null,
+  adminEditAdminName: null,
+  adminNewPin: "",
+  adminPinMsg: "",
+  adminPinMsgOk: false,
+  adminNewAdminName: "",
+  adminNewAdminPin: "",
+  adminAddMsg: "",
+  adminAddMsgOk: false
 };
 
 function freshDraft() {
@@ -383,6 +423,8 @@ function freshDraft() {
   };
 }
 var draft = freshDraft();
+var adminEditDraft = null; // set by goAdminEditReport() when an admin opens a saved report for editing
+function activeDraft() { return state.screen === "adminEditReport" ? adminEditDraft : draft; }
 
 /* =================================================================
    Car diagram renderer (shared by the editable screen, the detail
@@ -584,6 +626,7 @@ function renderHome() {
     '<div style="flex:1;"><div style="color:#EDF1F5;font-size:19px;font-weight:800;">فحص السيارات</div><div style="color:#8A96A3;font-size:12px;">سجل الفحوصات الدوري</div></div>' +
     '<button type="button" class="btn-icon" data-action="go-reports" title="التقارير"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M9 17v-6M12 17v-10M15 17v-3M4 21h16"/></svg></button>' +
     '<button type="button" class="btn-icon" data-action="go-vehicles" title="المركبات"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></button>' +
+    '<button type="button" class="btn-icon" data-action="go-admin" title="لوحة الإدارة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg></button>' +
     "</div></div>" +
     cloudBanner +
     '<div style="padding:12px 18px;display:flex;gap:8px;">' +
@@ -716,15 +759,12 @@ function renderDriverIdentityBlock() {
     "</div>";
 }
 
-function renderNew() {
-  var d = draft;
-  var unlocked = !!d.pinVerified;
+function renderInspectionFields(d) {
   var damagesListHtml = d.damages.length > 0
     ? '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">' + d.damages.map(function (m) { return renderDamageListRow(m, true); }).join("") + "</div>"
     : "";
 
-  var restHtml =
-    '<div class="section"><label class="label">المكان</label>' +
+  return '<div class="section"><label class="label">المكان</label>' +
     '<select class="input" data-field="place" style="margin-bottom:8px;">' +
     PLACE_OPTIONS.map(function (p) { return '<option value="' + escapeHtml(p) + '"' + (d.place === p ? " selected" : "") + ">" + escapeHtml(p) + "</option>"; }).join("") +
     "</select>" +
@@ -764,6 +804,12 @@ function renderNew() {
     "</div>" +
 
     (d.errorMsg ? '<div style="color:#F0526B;font-size:13px;text-align:center;margin-bottom:10px;">' + escapeHtml(d.errorMsg) + "</div>" : "");
+}
+
+function renderNew() {
+  var d = draft;
+  var unlocked = !!d.pinVerified;
+  var restHtml = renderInspectionFields(d);
 
   var lockedWrap = unlocked
     ? restHtml
@@ -829,6 +875,11 @@ function renderDetail() {
     '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
     '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
     '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">تفاصيل الفحص</div>' +
+    (state.adminUnlocked
+      ? '<button type="button" data-action="admin-edit-report" data-id="' + record.id + '" style="background:#212934;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4FD9C6" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>' +
+        '<span style="color:#4FD9C6;font-size:12px;font-weight:600;">تعديل</span></button>'
+      : "") +
     '<button type="button" data-action="open-print" data-id="' + record.id + '" style="background:#212934;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;">' +
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>' +
     '<span style="color:#EDF1F5;font-size:12px;font-weight:600;">طباعة</span></button></div>' +
@@ -842,6 +893,119 @@ function renderDetail() {
     '<div style="display:flex;align-items:center;gap:6px;color:#4FD9C6;font-size:13px;margin-top:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4FD9C6" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> تم تأكيد الهوية عبر الرمز الشخصي بتاريخ ' + formatDT(record.driverConfirmedAt) + "</div></div>" +
     '<div class="section"><div class="section-title">معلومات إضافية</div>' + row("آخر سائق", record.lastDriver) + row("تاريخ ووقت آخر سائق", formatDT(record.lastDriverDateTime)) + row("ملاحظات المرسل", record.dispatchComments) + "</div>" +
     "</div></div>";
+}
+
+/* =================================================================
+   Admin screens — PIN-gated area for changing inspector codes,
+   managing admin accounts, and editing already-saved reports.
+================================================================= */
+function renderAdminGate() {
+  return '<div style="padding-bottom:40px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">لوحة الإدارة</div></div>' +
+    '<div style="padding:0 18px;">' +
+    '<div class="section"><div class="section-title">رمز الأدمن</div>' +
+    '<input class="input" data-field="adminPinTry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="أدخل رمز الأدمن المكوّن من 4 أرقام" value="' + escapeHtml(state.adminPinTry) + '" />' +
+    (state.adminPinError ? '<div style="color:#F0526B;font-size:11.5px;margin-top:6px;">' + state.adminPinError + "</div>" : "") +
+    "</div></div></div>";
+}
+
+function renderAdminMenu() {
+  return '<div style="padding-bottom:40px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">لوحة الإدارة</div>' +
+    '<button type="button" data-action="admin-logout" style="background:#212934;border:none;border-radius:9px;padding:8px 12px;color:#8A96A3;font-size:12px;">خروج</button></div>' +
+    '<div style="padding:0 18px;">' +
+    '<div style="color:#8A96A3;font-size:12px;margin-bottom:12px;">مسجّل دخول كـ ' + escapeHtml(state.adminName) + '</div>' +
+    '<div class="section" data-action="go-admin-pins" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
+    '<div><div style="color:#EDF1F5;font-size:14px;font-weight:700;">تغيير رموز الفاحصين</div><div style="color:#8A96A3;font-size:12px;margin-top:2px;">تعديل الرمز السري لأي فاحص من القائمة</div></div>' +
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5C6773" stroke-width="2" style="transform:rotate(180deg);flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg></div>' +
+    '<div class="section" data-action="go-admin-admins" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
+    '<div><div style="color:#EDF1F5;font-size:14px;font-weight:700;">الأدمنز</div><div style="color:#8A96A3;font-size:12px;margin-top:2px;">إضافة أدمن جديد أو تغيير رمز أدمن حالي</div></div>' +
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5C6773" stroke-width="2" style="transform:rotate(180deg);flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg></div>' +
+    '<div style="color:#5C6773;font-size:11.5px;margin-top:4px;">لتعديل تقرير محفوظ: افتحه من الصفحة الرئيسية، وسيظهر زر "تعديل" أعلى الصفحة طالما إنت مسجّل دخول هون.</div>' +
+    "</div></div>";
+}
+
+function renderAdminDrivers() {
+  var editing = state.adminEditDriverName;
+  var rows = DRIVERS.map(function (name) {
+    var active = editing === name;
+    return '<div style="background:#12161D;border-radius:10px;padding:10px 12px;margin-bottom:8px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" data-action="admin-select-driver" data-driver="' + escapeHtml(name) + '">' +
+      '<span style="color:#EDF1F5;font-size:13.5px;">' + escapeHtml(name) + '</span>' +
+      '<span style="color:#4FD9C6;font-size:12px;">' + (active ? "إلغاء" : "تغيير الرمز") + "</span></div>" +
+      (active
+        ? '<div style="margin-top:10px;display:flex;gap:8px;">' +
+          '<input class="input" data-field="adminNewPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="رمز جديد (4 أرقام)" value="' + escapeHtml(state.adminNewPin || "") + '" style="flex:1;" />' +
+          '<button type="button" class="btn-primary" data-action="admin-save-driver-pin" data-driver="' + escapeHtml(name) + '" style="white-space:nowrap;padding:10px 14px;">حفظ</button></div>' +
+          (state.adminPinMsg ? '<div style="color:' + (state.adminPinMsgOk ? "#4FD9C6" : "#F0526B") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(state.adminPinMsg) + "</div>" : "")
+        : "") +
+      "</div>";
+  }).join("");
+  return '<div style="padding-bottom:40px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-admin-menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">تغيير رموز الفاحصين</div></div>' +
+    '<div style="padding:0 18px;">' + rows + "</div></div>";
+}
+
+function renderAdminAdmins() {
+  var editing = state.adminEditAdminName;
+  var names = Object.keys(adminsCache).sort();
+  var rows = names.map(function (name) {
+    var active = editing === name;
+    return '<div style="background:#12161D;border-radius:10px;padding:10px 12px;margin-bottom:8px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" data-action="admin-select-admin" data-admin="' + escapeHtml(name) + '">' +
+      '<span style="color:#EDF1F5;font-size:13.5px;">' + escapeHtml(name) + '</span>' +
+      '<span style="color:#4FD9C6;font-size:12px;">' + (active ? "إلغاء" : "تغيير الرمز") + "</span></div>" +
+      (active
+        ? '<div style="margin-top:10px;display:flex;gap:8px;">' +
+          '<input class="input" data-field="adminNewPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="رمز جديد (4 أرقام)" value="' + escapeHtml(state.adminNewPin || "") + '" style="flex:1;" />' +
+          '<button type="button" class="btn-primary" data-action="admin-save-admin-pin" data-admin="' + escapeHtml(name) + '" style="white-space:nowrap;padding:10px 14px;">حفظ</button></div>' +
+          (state.adminPinMsg ? '<div style="color:' + (state.adminPinMsgOk ? "#4FD9C6" : "#F0526B") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(state.adminPinMsg) + "</div>" : "")
+        : "") +
+      "</div>";
+  }).join("");
+  return '<div style="padding-bottom:40px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-admin-menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">الأدمنز</div></div>' +
+    '<div style="padding:0 18px;">' +
+    '<div class="section-title" style="padding:0 4px;">الأدمنز الحاليين (' + names.length + ")</div>" +
+    rows +
+    '<div class="section" style="margin-top:6px;"><div class="section-title">إضافة أدمن جديد</div>' +
+    '<div style="margin-bottom:8px;"><label class="label">الاسم</label>' +
+    '<input class="input" data-field="adminNewAdminName" value="' + escapeHtml(state.adminNewAdminName || "") + '" placeholder="اسم الأدمن الجديد" /></div>' +
+    '<div><label class="label">الرمز (4 أرقام)</label>' +
+    '<input class="input" data-field="adminNewAdminPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="' + escapeHtml(state.adminNewAdminPin || "") + '" placeholder="مثال: 1234" /></div>' +
+    (state.adminAddMsg ? '<div style="color:' + (state.adminAddMsgOk ? "#4FD9C6" : "#F0526B") + ';font-size:11.5px;margin-top:8px;">' + escapeHtml(state.adminAddMsg) + "</div>" : "") +
+    '<button type="button" class="btn-primary" data-action="admin-add-admin" style="width:100%;margin-top:10px;">إضافة</button>' +
+    "</div></div></div>";
+}
+
+function renderAdminEditReport() {
+  var d = adminEditDraft;
+  if (!d) {
+    return '<div style="padding:20px 18px;"><div class="section" style="text-align:center;">تعذّر تحميل الفحص</div></div>';
+  }
+  return '<div style="padding-bottom:110px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="admin-cancel-edit"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">تعديل الفحص (إدارة)</div></div>' +
+    '<div style="padding:0 18px;">' +
+    '<div class="section"><div class="section-title">بيانات الفحص</div>' +
+    '<div style="margin-bottom:10px;"><label class="label">رمز السيارة</label>' +
+    '<input class="input" data-field="carCode" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(d.carCode) + '" /></div>' +
+    '<div style="background:#12161D;border-radius:10px;padding:10px 12px;color:#8A96A3;font-size:12px;">الفاحص الأصلي: <span style="color:#EDF1F5;">' + escapeHtml(d.driver || "—") + '</span> — ' + formatDT(d.driverConfirmedAt) + "</div>" +
+    "</div>" +
+    renderInspectionFields(d) +
+    "</div>" +
+    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #10141B 60%, transparent);max-width:480px;margin:0 auto;">' +
+    '<button type="button" class="btn-primary" data-action="admin-save-report" style="width:100%;opacity:' + (d.saving ? "0.7" : "1") + ';" ' + (d.saving ? "disabled" : "") + ">" + (d.saving ? "جاري الحفظ..." : "حفظ التعديلات") + "</button></div>" +
+    "</div>";
 }
 
 function renderPrintOverlay() {
@@ -874,6 +1038,10 @@ function render(preserveScroll) {
   else if (state.screen === "detail") html = renderDetail();
   else if (state.screen === "vehicles") html = renderVehicles();
   else if (state.screen === "reports") html = renderReports();
+  else if (state.screen === "admin") html = state.adminUnlocked ? renderAdminMenu() : renderAdminGate();
+  else if (state.screen === "adminPins") html = state.adminUnlocked ? renderAdminDrivers() : renderAdminGate();
+  else if (state.screen === "adminAdmins") html = state.adminUnlocked ? renderAdminAdmins() : renderAdminGate();
+  else if (state.screen === "adminEditReport") html = state.adminUnlocked ? renderAdminEditReport() : renderAdminGate();
   app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay();
   if (preserveScroll) window.scrollTo(0, scrollSave);
 }
@@ -897,6 +1065,136 @@ function openDetail(id) { state.selectedId = id; state.screen = "detail"; render
 function goVehicles() { state.newVehicleCode = ""; state.vehicleError = ""; state.screen = "vehicles"; render(); }
 function goReports() { state.reportsCarQuery = ""; state.reportsDriverFilter = ""; state.screen = "reports"; render(); }
 
+/* -------------------- Admin -------------------- */
+function goAdmin() {
+  state.screen = "admin";
+  state.adminPinTry = "";
+  state.adminPinError = "";
+  render();
+}
+function checkAdminPin() {
+  var entered = state.adminPinTry.trim();
+  if (!/^[0-9]{4}$/.test(entered)) return;
+  hashPin(entered).then(function (hash) {
+    var match = Object.keys(adminsCache).find(function (name) { return adminsCache[name] === hash; });
+    if (match) {
+      state.adminUnlocked = true;
+      state.adminName = match;
+      state.adminPinError = "";
+      state.adminPinTry = "";
+      state.screen = "admin";
+    } else {
+      state.adminPinError = "رمز غير صحيح";
+      state.adminPinTry = "";
+    }
+    render();
+  });
+}
+function goAdminPins() { state.adminEditDriverName = null; state.adminNewPin = ""; state.adminPinMsg = ""; state.screen = "adminPins"; render(); }
+function goAdminAdmins() {
+  state.adminEditAdminName = null; state.adminNewPin = ""; state.adminPinMsg = "";
+  state.adminNewAdminName = ""; state.adminNewAdminPin = ""; state.adminAddMsg = "";
+  state.screen = "adminAdmins"; render();
+}
+function adminSaveDriverPin(name) {
+  var pin = (state.adminNewPin || "").trim();
+  if (!/^[0-9]{4}$/.test(pin)) { state.adminPinMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminPinMsgOk = false; render(); return; }
+  if (!db) { state.adminPinMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.adminPinMsgOk = false; render(); return; }
+  hashPin(pin).then(function (hash) {
+    db.collection("driverPins").doc(name).set({ hash: hash }).then(function () {
+      state.adminPinMsg = "تم تحديث الرمز بنجاح"; state.adminPinMsgOk = true; state.adminNewPin = ""; render();
+    }).catch(function (e) { console.error(e); state.adminPinMsg = "تعذّر الحفظ"; state.adminPinMsgOk = false; render(); });
+  });
+}
+function adminSaveAdminPin(name) {
+  var pin = (state.adminNewPin || "").trim();
+  if (!/^[0-9]{4}$/.test(pin)) { state.adminPinMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminPinMsgOk = false; render(); return; }
+  if (!db) { state.adminPinMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.adminPinMsgOk = false; render(); return; }
+  hashPin(pin).then(function (hash) {
+    db.collection("admins").doc(name).set({ hash: hash }).then(function () {
+      state.adminPinMsg = "تم تحديث الرمز بنجاح"; state.adminPinMsgOk = true; state.adminNewPin = ""; render();
+    }).catch(function (e) { console.error(e); state.adminPinMsg = "تعذّر الحفظ"; state.adminPinMsgOk = false; render(); });
+  });
+}
+function adminAddAdmin() {
+  var name = (state.adminNewAdminName || "").trim();
+  var pin = (state.adminNewAdminPin || "").trim();
+  if (!name) { state.adminAddMsg = "الرجاء إدخال اسم"; state.adminAddMsgOk = false; render(); return; }
+  if (!/^[0-9]{4}$/.test(pin)) { state.adminAddMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminAddMsgOk = false; render(); return; }
+  if (adminsCache[name]) { state.adminAddMsg = "هذا الاسم موجود مسبقًا بين الأدمنز"; state.adminAddMsgOk = false; render(); return; }
+  if (!db) { state.adminAddMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.adminAddMsgOk = false; render(); return; }
+  hashPin(pin).then(function (hash) {
+    db.collection("admins").doc(name).set({ hash: hash }).then(function () {
+      state.adminAddMsg = "تمت إضافة الأدمن بنجاح"; state.adminAddMsgOk = true;
+      state.adminNewAdminName = ""; state.adminNewAdminPin = ""; render();
+    }).catch(function (e) { console.error(e); state.adminAddMsg = "تعذّر الحفظ"; state.adminAddMsgOk = false; render(); });
+  });
+}
+function loadAdminEditDraft(record) {
+  return {
+    id: record.id,
+    carCode: record.carCode || "",
+    driver: record.driver || "",
+    driverConfirmedAt: record.driverConfirmedAt || "",
+    place: record.place || PLACE_OPTIONS[0],
+    placeNote: record.placeNote || "",
+    dateTime: record.dateTime || nowDateTimeLocal(),
+    damages: (record.damages || []).map(function (m) { return Object.assign({}, m); }),
+    selectedType: "D",
+    mechanicNotes: record.mechanicNotes || "",
+    checklist: Object.assign(emptyChecklist(), record.checklist || {}),
+    otherText: record.otherText || "",
+    lastDriver: record.lastDriver || "",
+    lastDriverDateTime: record.lastDriverDateTime || "",
+    dispatchComments: record.dispatchComments || "",
+    errorMsg: "",
+    saving: false
+  };
+}
+function goAdminEditReport(id) {
+  if (!state.adminUnlocked) return;
+  var record = inspectionsCache[id];
+  if (!record) return;
+  adminEditDraft = loadAdminEditDraft(record);
+  state.selectedId = id;
+  state.screen = "adminEditReport";
+  render();
+}
+function saveAdminEditReport() {
+  var d = adminEditDraft;
+  if (!d) return;
+  if (!d.carCode.trim()) { d.errorMsg = "الرجاء إدخال رمز السيارة"; render(); return; }
+  if (!db) { d.errorMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; render(); return; }
+  d.errorMsg = "";
+  d.saving = true;
+  render();
+  var updates = {
+    carCode: d.carCode.trim(),
+    place: d.place,
+    placeNote: d.placeNote.trim(),
+    dateTime: d.dateTime,
+    damages: d.damages,
+    mechanicNotes: d.mechanicNotes.trim(),
+    checklist: d.checklist,
+    otherText: d.otherText.trim(),
+    lastDriver: d.lastDriver.trim(),
+    lastDriverDateTime: d.lastDriverDateTime,
+    dispatchComments: d.dispatchComments.trim(),
+    editedByAdmin: state.adminName || "",
+    editedAt: nowIso()
+  };
+  db.collection("inspections").doc(d.id).update(updates).then(function () {
+    d.saving = false;
+    state.screen = "detail";
+    render();
+  }).catch(function (e) {
+    console.error("admin edit save failed", e);
+    d.saving = false;
+    d.errorMsg = "تعذّر الحفظ: تحقق من الإنترنت وحاول مرة أخرى";
+    render();
+  });
+}
+
 function handleAddVehicle() {
   var res = addVehicle(state.newVehicleCode);
   if (!res.ok) { state.vehicleError = res.msg; render(); return; }
@@ -919,25 +1217,27 @@ function lookupPast() {
 }
 
 function handleDiagramTap(diagramEl, e) {
+  var ad = activeDraft();
   var rect = diagramEl.getBoundingClientRect();
   var xFrac = (e.clientX - rect.left) / rect.width;
   var yFrac = (e.clientY - rect.top) / rect.height;
   if (xFrac < 0 || xFrac > 1 || yFrac < 0 || yFrac > 1) return;
-  var near = findNearMark(draft.damages, xFrac, yFrac);
+  var near = findNearMark(ad.damages, xFrac, yFrac);
   if (!near) {
-    draft.damages.push({ id: uid(), x: xFrac, y: yFrac, type: draft.selectedType, note: "" });
-  } else if (near.type === draft.selectedType) {
-    draft.damages = draft.damages.filter(function (d) { return d.id !== near.id; });
+    ad.damages.push({ id: uid(), x: xFrac, y: yFrac, type: ad.selectedType, note: "" });
+  } else if (near.type === ad.selectedType) {
+    ad.damages = ad.damages.filter(function (d) { return d.id !== near.id; });
   } else {
-    near.type = draft.selectedType;
-    if (draft.selectedType !== "O") near.note = "";
+    near.type = ad.selectedType;
+    if (ad.selectedType !== "O") near.note = "";
   }
   render();
 }
 
 function undoLastDamage() {
-  if (draft.damages.length === 0) return;
-  draft.damages.pop();
+  var ad = activeDraft();
+  if (ad.damages.length === 0) return;
+  ad.damages.pop();
   render();
 }
 
@@ -992,7 +1292,7 @@ function checkInspectorCode() {
   var entered = draft.pinTry.trim();
   if (!/^[0-9]{4}$/.test(entered)) return;
   hashPin(entered).then(function (hash) {
-    var match = DRIVERS.find(function (name) { return lsGet("vi_pin_" + name, null) === hash; });
+    var match = DRIVERS.find(function (name) { return driverPinsCache[name] === hash; });
     if (match) {
       draft.driver = match;
       draft.pinVerified = true;
@@ -1101,7 +1401,6 @@ window.addEventListener("afterprint", function () {
 });
 
 document.addEventListener("DOMContentLoaded", function () {
-  seedDriverPins();
   initCloud();
   var app = document.getElementById("app");
 
@@ -1125,10 +1424,10 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "add-vehicle") handleAddVehicle();
     else if (action === "open-detail") openDetail(t.dataset.id);
     else if (action === "lookup-past") lookupPast();
-    else if (action === "select-type") { draft.selectedType = t.dataset.type; render(); }
-    else if (action === "remove-damage") { draft.damages = draft.damages.filter(function (d) { return d.id !== t.dataset.id; }); render(); }
+    else if (action === "select-type") { activeDraft().selectedType = t.dataset.type; render(); }
+    else if (action === "remove-damage") { var adRm = activeDraft(); adRm.damages = adRm.damages.filter(function (dm) { return dm.id !== t.dataset.id; }); render(); }
     else if (action === "undo-damage") { undoLastDamage(); }
-    else if (action === "toggle-checklist") { draft.checklist[t.dataset.key] = !draft.checklist[t.dataset.key]; render(); }
+    else if (action === "toggle-checklist") { var adCk = activeDraft(); adCk.checklist[t.dataset.key] = !adCk.checklist[t.dataset.key]; render(); }
     else if (action === "toggle-remember-pin") { draft.rememberPin = !draft.rememberPin; render(); }
     else if (action === "save-inspection") saveInspection();
     else if (action === "reset-pin-check") { draft.driver = ""; draft.pinVerified = false; draft.pinError = ""; draft.pinTry = ""; render(); }
@@ -1136,6 +1435,19 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "open-draft-print") { state.printRecord = buildRecord(); render(); }
     else if (action === "print-past") { state.printRecord = inspectionsCache[t.dataset.id] || null; render(); }
     else if (action === "do-print") doPrint();
+    else if (action === "go-admin") goAdmin();
+    else if (action === "go-admin-menu") { state.screen = "admin"; render(); }
+    else if (action === "go-admin-pins") goAdminPins();
+    else if (action === "go-admin-admins") goAdminAdmins();
+    else if (action === "admin-logout") { state.adminUnlocked = false; state.adminName = ""; goHome(); }
+    else if (action === "admin-select-driver") { state.adminEditDriverName = state.adminEditDriverName === t.dataset.driver ? null : t.dataset.driver; state.adminNewPin = ""; state.adminPinMsg = ""; render(); }
+    else if (action === "admin-save-driver-pin") adminSaveDriverPin(t.dataset.driver);
+    else if (action === "admin-select-admin") { state.adminEditAdminName = state.adminEditAdminName === t.dataset.admin ? null : t.dataset.admin; state.adminNewPin = ""; state.adminPinMsg = ""; render(); }
+    else if (action === "admin-save-admin-pin") adminSaveAdminPin(t.dataset.admin);
+    else if (action === "admin-add-admin") adminAddAdmin();
+    else if (action === "admin-edit-report") goAdminEditReport(t.dataset.id);
+    else if (action === "admin-cancel-edit") { state.screen = "detail"; render(); }
+    else if (action === "admin-save-report") saveAdminEditReport();
   });
 
   app.addEventListener("input", function (e) {
@@ -1159,7 +1471,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     var noteId = t.dataset.noteId;
     if (noteId) {
-      var mark = draft.damages.find(function (d) { return d.id === noteId; });
+      var mark = activeDraft().damages.find(function (d) { return d.id === noteId; });
       if (mark) mark.note = t.value;
       return;
     }
@@ -1167,7 +1479,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!field) return;
     if (field === "homeDate") { state.homeDate = t.value; render(); return; }
     if (field === "newVehicleCode") { t.value = t.value.replace(/[^0-9]/g, ""); state.newVehicleCode = t.value; return; }
-    if (field === "carCode") { t.value = t.value.replace(/[^0-9]/g, ""); draft.carCode = t.value; return; }
+    if (field === "carCode") { t.value = t.value.replace(/[^0-9]/g, ""); activeDraft().carCode = t.value; return; }
     if (field === "pinTry") {
       t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4);
       draft.pinTry = t.value;
@@ -1175,15 +1487,25 @@ document.addEventListener("DOMContentLoaded", function () {
       if (draft.pinTry.length === 4) checkInspectorCode();
       return;
     }
-    draft[field] = t.value;
+    if (field === "adminPinTry") {
+      t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4);
+      state.adminPinTry = t.value;
+      state.adminPinError = "";
+      if (state.adminPinTry.length === 4) checkAdminPin();
+      return;
+    }
+    if (field === "adminNewPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminNewPin = t.value; return; }
+    if (field === "adminNewAdminName") { state.adminNewAdminName = t.value; return; }
+    if (field === "adminNewAdminPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminNewAdminPin = t.value; return; }
+    activeDraft()[field] = t.value;
   });
 
   app.addEventListener("change", function (e) {
     var t = e.target;
     var field = t.dataset.field;
     if (!field) return;
-    if (field === "place") { draft.place = t.value; render(); return; }
-    draft[field] = t.value;
+    if (field === "place") { activeDraft().place = t.value; render(); return; }
+    activeDraft()[field] = t.value;
   });
 
   render();
