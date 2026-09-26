@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="theme-color" content="#10141B" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="فحص السيارات" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<title>فحص السيارات</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: radial-gradient(circle at 50% 0%, #161D26 0%, #10141B 55%); font-family: 'Tajawal','Segoe UI',Tahoma,Arial,sans-serif; color: #EDF1F5; }
+  input, textarea, select, button { font-family: inherit; }
+  input::placeholder, textarea::placeholder { color: #5C6773; }
+  button { cursor: pointer; }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+  .input { width: 100%; background: #12161D; border: 1px solid #2A3340; border-radius: 10px; padding: 10px 12px; color: #EDF1F5; font-size: 14px; outline: none; color-scheme: dark; }
+  select.input { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238A96A3' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 12px center; padding-left: 32px; }
+  .btn-primary { background: linear-gradient(135deg,#4FD9C6,#37B5A6); color: #0B1013; border: none; border-radius: 12px; padding: 13px 16px; font-size: 14px; font-weight: 700; }
+  .btn-secondary { background: #212934; color: #EDF1F5; border: 1px solid #2A3340; border-radius: 12px; padding: 13px 16px; font-size: 14px; font-weight: 600; }
+  .btn-icon { background: transparent; border: none; padding: 6px; }
+  .section { background: #1A2028; border: 1px solid #2A3340; border-radius: 16px; padding: 16px; margin-bottom: 14px; }
+  .section-title { color: #EDF1F5; font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+  .label { font-size: 12px; color: #8A96A3; margin-bottom: 5px; display: block; }
+  .row-between { display: flex; justify-content: space-between; align-items: center; }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #2A3340; border-radius: 3px; }
+  .chk-box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid #3A4552; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
+  .chk-box.on { background: #4FD9C6; border: none; }
+  .type-btn { border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; border: 1px solid #2A3340; background: #212934; }
+  .type-btn.sel { }
+  @media print {
+    #screen-root { display: none !important; }
+    #print-overlay { position: static !important; inset: auto !important; background: none !important; display: block !important; height: auto !important; }
+    #print-overlay > div { max-width: none !important; max-height: none !important; overflow: visible !important; background: none !important; border-radius: 0 !important; }
+    .no-print { display: none !important; }
+    .print-scrollwrap { padding: 0 !important; overflow: visible !important; }
+    #print-area { width: 100%; }
+    @page { size: A4; margin: 12mm; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+
+/* =================================================================
+   Constants
+================================================================= */
+var TYPE_INFO = {
+  D: { label: "خبطة / انبعاج (Dent)" },
+  S: { label: "خدش (Scratch)" },
+  B: { label: "مكسور (Broken)" },
+  O: { label: "أخرى (Other)" }
+};
+
+var CHECKLIST_ITEMS = [
+  { key: "jack", label: "عدة الرفع" },
+  { key: "extinguisher", label: "طفاية حريق" },
+  { key: "insurance", label: "التأمين" },
+  { key: "insideMirror", label: "مرآة داخلية" },
+  { key: "radio", label: "راديو / مسجل" },
+  { key: "ashtray", label: "طفاية سجائر" },
+  { key: "toolkit", label: "عدة أدوات" },
+  { key: "firstAid", label: "إسعافات أولية" },
+  { key: "wheelCovers", label: "أغطية العجلات" },
+  { key: "clock", label: "ساعة" },
+  { key: "rightMirror", label: "مرآة يمين" },
+  { key: "lighter", label: "ولاعة" },
+  { key: "license", label: "الرخصة" },
+  { key: "leftMirror", label: "مرآة يسار" }
+];
+
+// place options — fixed list as requested
+var PLACE_OPTIONS = ["Amman Delegation", "Amman workshop", "Out side ( field )"];
+
+// Fixed list of inspectors
+var DRIVERS = ["محمد يحيى","عوض نبعات","خلدون شعبان","عامر هباهبه","مجدي بوريني","احمد سميح","عوض شعيبات","خالد مناعي","خالد الحنيطي","ركان دحدوح","مأمون العدوان","حيدر الشيدي","نضال حنفي","احمد المصري","اياد ابو رعد","بهاء الجوهري"];
+
+// Default 4-digit access codes (stored here as SHA-256 hashes only — never
+// the plain codes). These are only used to seed localStorage the very
+// first time the app runs on a device, so every inspector already has a
+// working code without needing to create one. The codes themselves were
+// shared with the app owner separately. An inspector's code can be changed
+// at any time from the "الفاحصون" (Inspectors) screen.
+var DRIVER_PIN_DEFAULTS = {
+  "محمد يحيى": "a58b724c8f5078b3ff3174d485703b63b335e13570c61767e30503b7e15333e2",
+  "عوض نبعات": "9060ce5653093cd9bff480cb01ff0e3a790e6f545e214a3dd85841daabac7848",
+  "خلدون شعبان": "950ee8b03a9a512207e9ec31f41e3ea3ea374b2f6f68d53f8398eabb1e5f3d56",
+  "عامر هباهبه": "ddd73f59fed2c93416f4c854a424eaefb61061e0a4660356f2445c89d517a7a2",
+  "مجدي بوريني": "fd53efd8940f305f79e212dc2e0a557d23eab8f2f60fbf219e19e3351b68e732",
+  "احمد سميح": "fc7b529a7305e3b5f33864d1f78770a56fd8dda38636161fe792a02ecfdbf79b",
+  "عوض شعيبات": "d8ed6dce12debd773d0002946d364dfef16488283681a6666fb9585cfc7f7223",
+  "خالد مناعي": "d19e5dbfd3d3afe04f12e4f5c12085065e973246970d42608186ab4d20d4a9c5",
+  "خالد الحنيطي": "924eab70797953e49fd45b201e4c211811352e311ba1794b4dfaa3b86496050d",
+  "ركان دحدوح": "8fcc65c79183c5b849fb9945508547fcbe845005639623906f2ccc854c3dc5f8",
+  "مأمون العدوان": "1098335e95d32f09abf3519a886cb9774d4f668e694eb2835c473643618efc0e",
+  "حيدر الشيدي": "fd04adb49c217e890b4ca5fea7aaec38d6004e88a969434e84a5bc4e4bc93016",
+  "نضال حنفي": "a24e43b7765e445a86b1904b1c24b094dbd50eaf218ddc9cd6c2b3cbcd72cea3",
+  "احمد المصري": "4f692e0f26fb1fa5e8eb946176d01dfe74762416726b9625256c306d7d07d6a7",
+  "اياد ابو رعد": "6c25c8f454fea8dd5cd0b201b4f739993aebfc454de7b410ee9457c553699a85",
+  "بهاء الجوهري": "0b94cd5e95afb17f118c0ed090fa2621bae55c692e2f7b13948c7d805985974e"
+};
+
+// Default vehicle list (seeded into localStorage on first run; can be
+// extended from the "المركبات" (Vehicles) screen)
+var VEHICLE_DEFAULTS = ["17646","22721","22722","22723","22725","22726","22727","22728","22830","22831","22832","22833","22834","22835","22836","22837","22838","22858","22859","22860","23005","23134","60388","60495","60496","15374","17301"];
+
+/* =================================================================
+   Firebase (shared online database) — every inspector's device reads
+   and writes the same "inspections" and "vehicles" collections, so
+   the manager sees everyone's work from any device.
+
+   SETUP (see the deployment notes): paste your project's config
+   below, then in the Firebase console enable Firestore Database and
+   turn on Anonymous sign-in under Authentication > Sign-in method.
+================================================================= */
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDZibUlReN2u-laEOxAzaGj3kkEVs6TfEU",
+  authDomain: "vehicle-check-app-90d7c.firebaseapp.com",
+  projectId: "vehicle-check-app-90d7c",
+  storageBucket: "vehicle-check-app-90d7c.firebasestorage.app",
+  messagingSenderId: "136587635818",
+  appId: "1:136587635818:web:68958d58066bbbc3e86e13"
+};
+
+var db = null;
+var cloudReady = false;
+var cloudError = null;
+var inspectionsCache = {};   // id -> full record
+var inspectionsIndex = [];   // lightweight list, newest first, for the home/reports screens
+var vehiclesCache = [];      // array of vehicle codes
+
+function initCloud() {
+  if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey.indexOf("PUT-YOUR") === 0) {
+    cloudError = "لم يتم ضبط إعدادات Firebase في التطبيق بعد";
+    render();
+    return;
+  }
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    try { db.enablePersistence({ synchronizeTabs: true }).catch(function () {}); } catch (e) {}
+
+    firebase.auth().signInAnonymously().catch(function (e) {
+      cloudError = "تعذّر الاتصال بالخدمة السحابية — تحقق من الإنترنت";
+      console.error(e);
+      render();
+    });
+
+    firebase.auth().onAuthStateChanged(function (user) {
+      if (!user) return;
+      cloudReady = true;
+      cloudError = null;
+
+      db.collection("vehicles").onSnapshot(function (snap) {
+        if (snap.empty) {
+          var batch = db.batch();
+          VEHICLE_DEFAULTS.forEach(function (code) {
+            batch.set(db.collection("vehicles").doc(code), { code: code });
+          });
+          batch.commit().catch(function (e) { console.error(e); });
+          return;
+        }
+        vehiclesCache = snap.docs.map(function (d) { return d.id; });
+        render();
+      }, function (e) { console.error("vehicles listener:", e); });
+
+      db.collection("inspections").orderBy("dateTime", "desc").onSnapshot(function (snap) {
+        var cache = {}, idx = [];
+        snap.forEach(function (doc) {
+          var rec = doc.data();
+          rec.id = doc.id;
+          cache[doc.id] = rec;
+          idx.push({
+            id: doc.id, carCode: rec.carCode, driver: rec.driver, place: rec.place,
+            dateTime: rec.dateTime, damageCount: (rec.damages || []).length,
+            badgeColor: badgeColorFor(rec.damages || [])
+          });
+        });
+        inspectionsCache = cache;
+        inspectionsIndex = idx;
+        render(true);
+      }, function (e) { console.error("inspections listener:", e); });
+    });
+  } catch (e) {
+    cloudError = "تعذّر تهيئة الخدمة السحابية";
+    console.error(e);
+    render();
+  }
+}
+
+var CAR_DIAGRAM_IMG = "data:image/png;base64,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";
+var CAR_DIAGRAM_IMG_DARK = "data:image/png;base64,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";
+var CAR_DIAGRAM_W = 774, CAR_DIAGRAM_H = 452, HIT_RADIUS_PX = 20;
+
+/* =================================================================
+   Storage helpers (plain localStorage — works in any browser, no
+   server, no network — so this keeps working when the file is
+   opened directly, emailed, or saved to a phone)
+================================================================= */
+function lsGet(key, fallback) {
+  try {
+    var v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+function lsSet(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (e) {
+    console.error("storage failed", e);
+    return false;
+  }
+}
+
+function getHistory(key) { return lsGet("vi_hist_" + key, []); }
+function pushHistory(key, value) {
+  if (!value) return;
+  var arr = getHistory(key).filter(function (v) { return v !== value; });
+  arr.unshift(value);
+  lsSet("vi_hist_" + key, arr.slice(0, 20));
+}
+function datalistHtml(id, key) {
+  return '<datalist id="' + id + '">' + getHistory(key).map(function (v) {
+    return '<option value="' + escapeHtml(v) + '"></option>';
+  }).join("") + "</datalist>";
+}
+
+/* =================================================================
+   PIN identity check (SHA-256 via the browser's built-in Web
+   Crypto API — no library needed). This is device-local, not a
+   server login, but it stops someone from saving an inspection
+   under a driver name they don't have the code for, on a shared
+   phone/tablet.
+================================================================= */
+function hasPinFor(driver) { return !!lsGet("vi_pin_" + driver, null); }
+function hashPin(pin) {
+  var enc = new TextEncoder().encode(pin);
+  return crypto.subtle.digest("SHA-256", enc).then(function (buf) {
+    return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+  });
+}
+function seedDriverPins() {
+  // The codes in DRIVER_PIN_DEFAULTS are always the source of truth —
+  // force-sync on every load so a stale locally-saved code can never
+  // silently override the current list in the file.
+  DRIVERS.forEach(function (name) {
+    if (DRIVER_PIN_DEFAULTS[name]) {
+      lsSet("vi_pin_" + name, DRIVER_PIN_DEFAULTS[name]);
+    }
+  });
+}
+function randomFourDigitCode() {
+  return String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+}
+
+/* =================================================================
+   Vehicle list (seeded once, then editable from the "المركبات" screen)
+================================================================= */
+function getVehicles() { return vehiclesCache; }
+function addVehicle(code) {
+  code = String(code || "").trim();
+  if (!/^[0-9]+$/.test(code)) return { ok: false, msg: "رمز المركبة يجب أن يكون أرقامًا فقط" };
+  if (vehiclesCache.indexOf(code) !== -1) return { ok: false, msg: "رمز المركبة موجود مسبقًا في القائمة" };
+  if (!db) return { ok: false, msg: "لا يوجد اتصال بالخدمة السحابية حاليًا" };
+  vehiclesCache = [code].concat(vehiclesCache);
+  db.collection("vehicles").doc(code).set({ code: code }).catch(function (e) { console.error(e); });
+  return { ok: true };
+}
+
+/* =================================================================
+   Small utilities
+================================================================= */
+function uid() { return "m_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function nowIso() { return new Date().toISOString(); }
+function nowDateTimeLocal() {
+  var d = new Date();
+  function pad(n) { return String(n).padStart(2, "0"); }
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+function formatDT(v) {
+  if (!v) return "—";
+  var d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  return d.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+}
+function formatDateOnly(v) {
+  if (!v) return "—";
+  var d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  return d.toLocaleDateString("en-GB", { dateStyle: "medium" });
+}
+function formatTimeOnly(v) {
+  if (!v) return "—";
+  var d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  return d.toLocaleTimeString("en-GB", { timeStyle: "short" });
+}
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function classifyPoint(xFrac, yFrac) {
+  var front = xFrac < 0.38 ? "المقدمة (FRT)" : xFrac > 0.62 ? "المؤخرة (RR)" : "المنتصف";
+  var side = yFrac < 0.5 ? "الجانب الأيمن (R/H)" : "الجانب الأيسر (L/H)";
+  return front + " - " + side;
+}
+function findNearMark(damages, xFrac, yFrac) {
+  var best = null, bestDist = Infinity;
+  for (var i = 0; i < damages.length; i++) {
+    var d = damages[i];
+    var dx = (d.x - xFrac) * CAR_DIAGRAM_W;
+    var dy = (d.y - yFrac) * CAR_DIAGRAM_H;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < HIT_RADIUS_PX && dist < bestDist) { best = d; bestDist = dist; }
+  }
+  return best;
+}
+function emptyChecklist() {
+  var o = {};
+  CHECKLIST_ITEMS.forEach(function (i) { o[i.key] = false; });
+  return o;
+}
+function badgeColorFor(damages) {
+  if (damages.length === 0) return "#4FD9C6";
+  if (damages.some(function (d) { return d.type === "B"; })) return "#F0526B";
+  return "#F0A868";
+}
+
+/* =================================================================
+   App state
+================================================================= */
+var state = {
+  screen: "home",
+  selectedId: null,
+  homeQuery: "",
+  homeDate: "",
+  printRecord: null,
+  printSaving: false,
+  newVehicleCode: "",
+  vehicleError: "",
+  reportsCarQuery: "",
+  reportsDriverFilter: ""
+};
+
+function freshDraft() {
+  return {
+    carCode: "",
+    driver: "",
+    pinTry: "", pinError: "", pinVerified: false, rememberPin: false,
+    driverConfirmedAt: "",
+    place: PLACE_OPTIONS[0],
+    placeNote: "",
+    dateTime: nowDateTimeLocal(),
+    damages: [],
+    selectedType: "D",
+    mechanicNotes: "",
+    checklist: emptyChecklist(),
+    otherText: "",
+    lastDriver: "",
+    lastDriverDateTime: "",
+    dispatchComments: "",
+    pastInspections: null,
+    pastLoading: false,
+    errorMsg: "",
+    saving: false
+  };
+}
+var draft = freshDraft();
+
+/* =================================================================
+   Car diagram renderer (shared by the editable screen, the detail
+   screen, and the printed report)
+================================================================= */
+function renderCarDiagram(damages, opts) {
+  opts = opts || {};
+  var editable = !!opts.editable;
+  var theme = opts.theme || "light";
+  var isDark = theme === "dark";
+  var size = opts.size || 340;
+  var idAttr = opts.id ? ' id="' + opts.id + '"' : "";
+  var boxClass = opts.boxClass ? ' ' + opts.boxClass : "";
+  var marksHtml = damages.map(function (d) {
+    return '<div style="position:absolute;left:' + (d.x * 100) + '%;top:' + (d.y * 100) + '%;transform:translate(-50%,-50%);pointer-events:none;width:17px;height:17px;border-radius:50%;background:#fff;border:1.6px solid #000;box-shadow:0 0 0 1px #fff;display:flex;align-items:center;justify-content:center;">' +
+      '<span style="font-size:10px;font-weight:800;color:#000;font-family:Arial,Helvetica,sans-serif;line-height:1;">' + d.type + "</span></div>";
+  }).join("");
+  var img = isDark ? CAR_DIAGRAM_IMG_DARK : CAR_DIAGRAM_IMG;
+  return '<div style="width:100%;display:flex;justify-content:center;">' +
+    '<div' + idAttr + ' class="' + (editable ? "" : "vi-diagram-box") + boxClass + '" data-diagram="' + (editable ? "editable" : "static") + '" style="position:relative;width:100%;max-width:' + size + 'px;background:' + (isDark ? "#12161D" : "#fff") + ';border:' + (isDark ? "1px solid #2A3340" : "none") + ';border-radius:12px;overflow:hidden;cursor:' + (editable ? "crosshair" : "default") + ';touch-action:manipulation;">' +
+    '<img src="' + img + '" alt="مخطط السيارة" draggable="false" style="width:100%;display:block;user-select:none;" />' +
+    marksHtml +
+    "</div></div>";
+}
+
+function renderTypePicker(selected) {
+  return '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">' +
+    Object.keys(TYPE_INFO).map(function (k) {
+      var info = TYPE_INFO[k];
+      var sel = k === selected;
+      return '<button type="button" class="type-btn" data-action="select-type" data-type="' + k + '" style="border:' + (sel ? "2px solid #4FD9C6" : "1px solid #2A3340") + ";background:" + (sel ? "#4FD9C61F" : "#212934") + '">' +
+        '<span style="font-size:18px;font-weight:800;color:#EDF1F5;font-family:Arial,Helvetica,sans-serif;line-height:1;">' + k + "</span>" +
+        '<span style="font-size:9.5px;color:#8A96A3;text-align:center;">' + info.label + "</span>" +
+        "</button>";
+    }).join("") + "</div>";
+}
+
+function renderLegend() {
+  return '<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">' +
+    Object.keys(TYPE_INFO).map(function (k) {
+      var v = TYPE_INFO[k];
+      return '<div style="display:flex;align-items:center;gap:5px;">' +
+        '<span style="width:15px;height:15px;border-radius:50%;background:#fff;border:1.4px solid #8A96A3;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#0B1013;">' + k + "</span>" +
+        '<span style="font-size:11px;color:#8A96A3;">' + v.label + "</span></div>";
+    }).join("") + "</div>";
+}
+
+function renderPrintLegend() {
+  return '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">' +
+    Object.keys(TYPE_INFO).map(function (k) {
+      var v = TYPE_INFO[k];
+      return '<div style="display:flex;align-items:center;gap:4px;">' +
+        '<span style="width:13px;height:13px;border-radius:50%;background:#fff;border:1.2px solid #16181C;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#000;">' + k + "</span>" +
+        '<span style="font-size:10px;color:#555;">' + v.label + "</span></div>";
+    }).join("") + "</div>";
+}
+
+function renderDamageListRow(mark, editable) {
+  var label = classifyPoint(mark.x, mark.y);
+  var isOther = mark.type === "O";
+  var noteHtml = "";
+  if (isOther) {
+    noteHtml = editable
+      ? '<input class="input" data-note-id="' + mark.id + '" value="' + escapeHtml(mark.note || "") + '" placeholder="اشرح نوع الضرر..." style="margin-top:8px;padding:7px 10px;font-size:12px;" />'
+      : (mark.note ? '<div style="color:#8A96A3;font-size:11px;margin-top:4px;">' + escapeHtml(mark.note) + "</div>" : "");
+  }
+  var removeBtn = editable ? '<button type="button" class="btn-icon" data-action="remove-damage" data-id="' + mark.id + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' : "";
+  return '<div style="background:#12161D;border-radius:10px;padding:8px 10px;">' +
+    '<div class="row-between"><div style="display:flex;align-items:center;gap:8px;">' +
+    '<span style="width:18px;height:18px;border-radius:50%;background:#fff;border:1.4px solid #2A3340;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#0B1013;flex-shrink:0;">' + mark.type + "</span>" +
+    '<div><div style="color:#EDF1F5;font-size:13px;">' + label + '</div><div style="color:#8A96A3;font-size:11px;">' + TYPE_INFO[mark.type].label + "</div></div></div>" + removeBtn + "</div>" +
+    noteHtml + "</div>";
+}
+
+/* =================================================================
+   Printed report HTML (white card — used both in the modal and
+   for the saved/shared PNG)
+================================================================= */
+function renderReport(record) {
+  var damages = record.damages || [];
+  var otherDamages = damages.filter(function (d) { return d.type === "O"; });
+  var damagesHtml = damages.length === 0
+    ? '<div style="font-size:12px;color:#555;">لا توجد ملاحظات — السيارة سليمة</div>'
+    : otherDamages.length === 0
+    ? ""
+    : '<div style="display:flex;flex-direction:column;gap:5px;">' + otherDamages.map(function (mark) {
+        return '<div style="display:flex;align-items:baseline;gap:8px;font-size:12px;border-bottom:1px solid #eee;padding:6px 0;line-height:1.55;">' +
+          '<span style="width:15px;height:15px;border-radius:50%;background:#fff;border:1.2px solid #16181C;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#000;flex-shrink:0;transform:translateY(1px);">' + mark.type + "</span>" +
+          '<span style="font-weight:600;flex-shrink:0;">' + classifyPoint(mark.x, mark.y) + '</span>' +
+          '<span style="color:#555;">' + TYPE_INFO[mark.type].label + (mark.note ? " · " + escapeHtml(mark.note) : "") + "</span></div>";
+      }).join("") + "</div>";
+
+  function cell(label, value, full) {
+    return '<div style="' + (full ? "grid-column:1/-1;" : "") + 'padding:6px 0;border-bottom:1px solid #f0f0f0;">' +
+      '<div style="font-size:10.5px;color:#8A8F97;margin-bottom:2px;">' + label + '</div>' +
+      '<div style="font-size:12.5px;font-weight:600;line-height:1.45;">' + escapeHtml(value || "—") + "</div></div>";
+  }
+
+  var checklistHtml = '<div class="vi-checklist" style="display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;">' + CHECKLIST_ITEMS.map(function (item) {
+    return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.5;"><span style="flex-shrink:0;">' + ((record.checklist || {})[item.key] ? "✔" : "✕") + "</span><span>" + item.label + "</span></div>";
+  }).join("") + "</div>";
+
+  var placeLine = record.place + (record.placeNote ? " — " + escapeHtml(record.placeNote) : "");
+
+  return '<style>' +
+    '@media print, screen and (min-width: 480px) {' +
+    '  .vi-report-card .vi-info-grid { grid-template-columns: 1fr 1fr !important; }' +
+    '  .vi-report-card .vi-checklist { grid-template-columns: repeat(3,1fr) !important; }' +
+    '}' +
+    '@media print {' +
+    '  .vi-report-card { max-width: 190mm !important; padding: 14mm !important; }' +
+    '  .vi-report-card .vi-diagram-box { max-width: 300px !important; }' +
+    '}' +
+    "</style>" +
+    '<div class="vi-report-card" style="background:#fff;color:#16181C;padding:20px;border-radius:10px;font-family:Tajawal,Segoe UI,Tahoma,Arial,sans-serif;line-height:1.55;max-width:100%;margin:0 auto;box-sizing:border-box;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:2px solid #16181C;padding-bottom:12px;margin-bottom:16px;">' +
+    '<div style="font-size:17px;font-weight:800;">تقرير فحص السيارة</div>' +
+    '<div style="text-align:left;font-size:11.5px;color:#555;line-height:1.6;flex-shrink:0;"><div>' + formatDateOnly(record.dateTime) + '</div><div>' + formatTimeOnly(record.dateTime) + "</div></div></div>" +
+
+    '<div class="vi-info-grid" style="display:grid;grid-template-columns:1fr;gap:0 20px;margin-bottom:6px;">' +
+    cell("رمز السيارة", record.carCode) +
+    cell("الفاحص", record.driver) +
+    cell("المكان", placeLine, true) +
+    cell("تاريخ الفحص", formatDateOnly(record.dateTime)) +
+    cell("وقت الفحص", formatTimeOnly(record.dateTime)) +
+    "</div>" +
+
+    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">حالة الهيكل</div>' +
+    renderPrintLegend() +
+    '<div style="margin:10px 0;border:1px solid #eee;border-radius:10px;padding:8px;">' + renderCarDiagram(damages, { editable: false, theme: "light", size: 250 }) + "</div>" +
+    damagesHtml +
+
+    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">ملاحظات على الميكانيك / غرفة السائق والركاب</div>' +
+    '<div style="font-size:12.5px;line-height:1.6;color:' + (record.mechanicNotes ? "#16181C" : "#555") + ';">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div>" +
+
+    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">التجهيزات</div>' + checklistHtml +
+    (record.otherText ? '<div style="margin-top:8px;font-size:12px;line-height:1.5;">أخرى: ' + escapeHtml(record.otherText) + "</div>" : "") +
+
+    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">هوية الفاحص</div>' +
+    '<div style="font-size:12px;line-height:1.55;">✔ تم تأكيد الهوية عبر الرمز الشخصي لـ <b>' + escapeHtml(record.driver || "—") + '</b><div style="color:#555;margin-top:3px;">بتاريخ: ' + formatDateOnly(record.driverConfirmedAt) + ' — الوقت: ' + formatTimeOnly(record.driverConfirmedAt) + "</div></div>" +
+
+    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">معلومات إضافية</div>' +
+    '<div class="vi-info-grid" style="display:grid;grid-template-columns:1fr;gap:0 20px;">' +
+    cell("آخر سائق", record.lastDriver) +
+    cell("تاريخ آخر سائق", formatDateOnly(record.lastDriverDateTime)) +
+    cell("وقت آخر سائق", formatTimeOnly(record.lastDriverDateTime)) +
+    cell("ملاحظات المرسل", record.dispatchComments, true) +
+    "</div>" +
+    "</div>";
+}
+
+/* =================================================================
+   Screens
+================================================================= */
+function renderHome() {
+  var index = inspectionsIndex;
+  var q = state.homeQuery.trim().toLowerCase();
+  var filtered = index.filter(function (it) {
+    if (q && (it.carCode || "").toLowerCase().indexOf(q) < 0 && (it.driver || "").toLowerCase().indexOf(q) < 0 && (it.place || "").toLowerCase().indexOf(q) < 0) return false;
+    if (state.homeDate) {
+      var d = it.dateTime ? new Date(it.dateTime) : null;
+      if (!d || isNaN(d.getTime())) return false;
+      function pad(n) { return String(n).padStart(2, "0"); }
+      var isoDate = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+      if (isoDate !== state.homeDate) return false;
+    }
+    return true;
+  });
+
+  var listHtml;
+  if (filtered.length === 0) {
+    listHtml = '<div class="section" style="text-align:center;padding:32px 16px;">' +
+      '<div style="color:#EDF1F5;font-size:14px;margin-bottom:4px;">' + (index.length === 0 ? "لا يوجد فحوصات بعد" : "لا توجد نتائج مطابقة") + "</div>" +
+      '<div style="color:#8A96A3;font-size:12px;">' + (index.length === 0 ? "ابدأ بإنشاء أول فحص لسيارة" : "جرّب كلمات بحث أو تاريخ مختلف") + "</div></div>";
+  } else {
+    listHtml = filtered.map(function (it) {
+      var sevLabel = it.damageCount === 0 ? "سليمة" : it.damageCount + " ملاحظات";
+      return '<div class="section" data-action="open-detail" data-id="' + it.id + '" style="margin-bottom:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
+        '<div style="flex:1;min-width:0;">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#EDF1F5;font-size:15px;font-weight:700;">' + escapeHtml(it.carCode || "بدون رمز") + '</span>' +
+        '<span style="font-size:11px;color:' + it.badgeColor + ";background:" + it.badgeColor + '1F;padding:2px 8px;border-radius:999px;">' + sevLabel + "</span></div>" +
+        '<div style="color:#8A96A3;font-size:12px;">' + escapeHtml(it.driver || "—") + " · " + escapeHtml(it.place || "—") + "</div>" +
+        '<div style="color:#5C6773;font-size:11px;margin-top:2px;">' + formatDT(it.dateTime) + "</div></div>" +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5C6773" stroke-width="2" style="transform:rotate(180deg);"><path d="M9 6l6 6-6 6"/></svg></div>';
+    }).join("");
+  }
+
+  var cloudBanner = "";
+  if (cloudError) {
+    cloudBanner = '<div style="margin:0 18px 10px;background:#2A1518;border:1px solid #5C2530;border-radius:10px;padding:10px 12px;color:#F0899A;font-size:11.5px;">⚠ ' + escapeHtml(cloudError) + "</div>";
+  } else if (!cloudReady) {
+    cloudBanner = '<div style="margin:0 18px 10px;background:#12161D;border:1px solid #2A3340;border-radius:10px;padding:10px 12px;color:#8A96A3;font-size:11.5px;display:flex;align-items:center;gap:8px;"><span class="spin">⟳</span> جاري الاتصال بالخدمة السحابية...</div>';
+  }
+
+  return '<div style="padding-bottom:90px;">' +
+    '<div style="padding:22px 18px 8px;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">' +
+    '<div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#4FD9C6,#2B8F82);display:flex;align-items:center;justify-content:center;">' +
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="2.2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></div>' +
+    '<div style="flex:1;"><div style="color:#EDF1F5;font-size:19px;font-weight:800;">فحص السيارات</div><div style="color:#8A96A3;font-size:12px;">سجل الفحوصات الدوري</div></div>' +
+    '<button type="button" class="btn-icon" data-action="go-reports" title="التقارير"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M9 17v-6M12 17v-10M15 17v-3M4 21h16"/></svg></button>' +
+    '<button type="button" class="btn-icon" data-action="go-vehicles" title="المركبات"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></button>' +
+    "</div></div>" +
+    cloudBanner +
+    '<div style="padding:12px 18px;display:flex;gap:8px;">' +
+    '<input class="input" id="home-search" value="' + escapeHtml(state.homeQuery) + '" placeholder="ابحث برمز السيارة، المكان، أو الفاحص" style="flex:1;" />' +
+    '<input class="input" type="date" data-field="homeDate" value="' + escapeHtml(state.homeDate) + '" title="التقويم — الرجوع لفحص قديم" style="width:150px;flex-shrink:0;" />' +
+    "</div>" +
+    (state.homeDate ? '<div style="padding:0 18px 8px;display:flex;justify-content:flex-end;"><button type="button" data-action="clear-home-date" style="background:none;border:none;color:#5C6773;font-size:11.5px;text-decoration:underline;">مسح فلتر التاريخ (' + formatDateOnly(state.homeDate) + ")</button></div>" : "") +
+    '<div style="padding:4px 18px;">' + listHtml + "</div>" +
+    '<button type="button" data-action="go-new" class="btn-primary" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:min(90%,420px);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 30px -8px rgba(79,217,198,0.5);">' +
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> فحص جديد</button>' +
+    "</div>";
+}
+
+/* =================================================================
+   Vehicles screen
+================================================================= */
+function renderVehicles() {
+  var vehicles = getVehicles();
+  return '<div style="padding-bottom:40px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">المركبات</div></div>' +
+    '<div style="padding:0 18px;">' +
+    '<div class="section"><div class="section-title">إضافة مركبة جديدة</div>' +
+    '<div style="display:flex;gap:8px;">' +
+    '<input class="input" data-field="newVehicleCode" inputmode="numeric" pattern="[0-9]*" placeholder="رمز المركبة" value="' + escapeHtml(state.newVehicleCode) + '" style="flex:1;" />' +
+    '<button type="button" class="btn-primary" data-action="add-vehicle" style="white-space:nowrap;padding:10px 16px;">إضافة</button></div>' +
+    (state.vehicleError ? '<div style="color:#F0526B;font-size:11.5px;margin-top:8px;">' + escapeHtml(state.vehicleError) + "</div>" : "") +
+    "</div>" +
+    '<div class="section"><div class="section-title">قائمة المركبات (' + vehicles.length + ")</div>" +
+    '<div style="display:flex;flex-direction:column;gap:6px;">' +
+    vehicles.map(function (v) {
+      return '<div style="background:#12161D;border-radius:9px;padding:9px 12px;color:#EDF1F5;font-size:14px;font-weight:600;">' + escapeHtml(v) + "</div>";
+    }).join("") +
+    "</div></div></div></div>";
+}
+
+
+
+function renderReports() {
+  var q = (state.reportsCarQuery || "").trim().toLowerCase();
+  var carMatches = q
+    ? inspectionsIndex.filter(function (it) { return (it.carCode || "").toLowerCase().indexOf(q) !== -1; })
+    : [];
+
+  var driverCounts = {};
+  DRIVERS.forEach(function (d) { driverCounts[d] = 0; });
+  inspectionsIndex.forEach(function (it) { if (it.driver) driverCounts[it.driver] = (driverCounts[it.driver] || 0) + 1; });
+  var driverList = DRIVERS.slice().sort(function (a, b) { return (driverCounts[b] || 0) - (driverCounts[a] || 0); });
+
+  var filterDriver = state.reportsDriverFilter;
+  var driverMatches = filterDriver ? inspectionsIndex.filter(function (it) { return it.driver === filterDriver; }) : [];
+
+  function row(it) {
+    var sevLabel = it.damageCount === 0 ? "سليمة" : it.damageCount + " ملاحظات";
+    return '<div style="background:#12161D;border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+      '<div style="flex:1;min-width:0;cursor:pointer;" data-action="open-detail" data-id="' + it.id + '">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><span style="color:#EDF1F5;font-size:13.5px;font-weight:700;">' + escapeHtml(it.carCode || "—") + '</span>' +
+      '<span style="font-size:10.5px;color:' + it.badgeColor + ";background:" + it.badgeColor + '1F;padding:1px 7px;border-radius:999px;">' + sevLabel + "</span></div>" +
+      '<div style="color:#8A96A3;font-size:11.5px;">' + escapeHtml(it.driver || "—") + " · " + formatDT(it.dateTime) + "</div></div>" +
+      '<button type="button" data-action="open-print" data-id="' + it.id + '" title="طباعة" style="background:#212934;border:none;border-radius:9px;padding:8px 10px;flex-shrink:0;">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg></button></div>';
+  }
+
+  return '<div style="padding-bottom:40px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">التقارير</div></div>' +
+    '<div style="padding:0 18px;">' +
+
+    '<div class="section"><div class="section-title">طباعة حسب رقم السيارة</div>' +
+    '<input class="input" id="reports-car-query" data-field="reportsCarQuery" list="dl-carCode" inputmode="numeric" placeholder="ادخل رقم السيارة" value="' + escapeHtml(state.reportsCarQuery) + '" />' +
+    (q
+      ? (carMatches.length
+          ? '<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">' + carMatches.map(row).join("") + "</div>"
+          : '<div style="color:#8A96A3;font-size:12px;margin-top:10px;">لا توجد فحوصات لهذا الرقم</div>')
+      : "") +
+    "</div>" +
+
+    '<div class="section"><div class="section-title">حسب الفاحص</div>' +
+    '<div style="display:flex;flex-direction:column;">' +
+    driverList.map(function (d) {
+      var active = state.reportsDriverFilter === d;
+      return '<div data-action="filter-by-driver" data-driver="' + escapeHtml(d) + '" style="display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid #2A3340;cursor:pointer;border-radius:8px;' + (active ? "background:#212934;" : "") + '">' +
+        '<span style="color:#EDF1F5;font-size:13.5px;">' + escapeHtml(d) + '</span>' +
+        '<span style="color:#8A96A3;font-size:12px;">' + (driverCounts[d] || 0) + " فحص</span></div>";
+    }).join("") +
+    "</div>" +
+    (filterDriver
+      ? ('<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">' +
+          (driverMatches.length ? driverMatches.map(row).join("") : '<div style="color:#8A96A3;font-size:12px;">لا توجد فحوصات لهذا الفاحص</div>') +
+          "</div>")
+      : "") +
+    "</div>" +
+
+    "</div></div>";
+}
+
+function renderPastInspections() {
+  if (draft.pastLoading) {
+    return '<div style="display:flex;align-items:center;gap:8px;color:#8A96A3;font-size:12px;padding:0 4px 14px;"><span class="spin">⟳</span> جاري البحث...</div>';
+  }
+  if (!draft.pastInspections) return "";
+  if (draft.pastInspections.length === 0) {
+    return '<div class="section"><div class="section-title">آخر فحوصات لهذه السيارة</div><div style="color:#8A96A3;font-size:12px;">لا يوجد فحوصات سابقة بهذا الرمز</div></div>';
+  }
+  var cards = draft.pastInspections.map(function (rec) {
+    var color = badgeColorFor(rec.damages || []);
+    return '<div style="background:#12161D;border:1px solid #2A3340;border-radius:12px;padding:10px 12px;margin-bottom:8px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="width:9px;height:9px;border-radius:3px;background:' + color + ';display:inline-block;"></span>' +
+      '<div><div style="color:#EDF1F5;font-size:13px;">' + formatDT(rec.dateTime) + '</div><div style="color:#8A96A3;font-size:11px;">' + escapeHtml(rec.driver || "—") + " · " + ((rec.damages || []).length === 0 ? "سليمة" : (rec.damages || []).length + " ملاحظات") + "</div></div></div>" +
+      '<button type="button" class="btn-secondary" data-action="print-past" data-id="' + rec.id + '" style="width:100%;padding:9px 12px;">عرض / طباعة هذا الفحص</button></div>';
+  }).join("");
+  return '<div class="section"><div class="section-title">آخر فحوصات لهذه السيارة (كمرجع)</div>' + cards + "</div>";
+}
+
+function renderDriverIdentityBlock() {
+  if (draft.pinVerified && draft.driver) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;background:#12161D;border:1px solid #2A3340;border-radius:10px;padding:10px 12px;">' +
+      '<div style="display:flex;align-items:center;gap:6px;color:#4FD9C6;font-size:12px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4FD9C6" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> ' + escapeHtml(draft.driver) + " — " + formatDT(draft.driverConfirmedAt) + "</div>" +
+      '<button type="button" data-action="reset-pin-check" style="background:none;border:none;color:#5C6773;font-size:11px;text-decoration:underline;">تغيير</button></div>';
+  }
+  return '<div>' +
+    '<label class="label">رمز الفاحص</label>' +
+    '<input class="input" data-field="pinTry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="أدخل رمزك المكوّن من 4 أرقام" value="' + escapeHtml(draft.pinTry) + '" />' +
+    (draft.pinError ? '<div style="color:#F0526B;font-size:11.5px;margin-top:6px;">' + draft.pinError + "</div>" : "") +
+    '<div data-action="toggle-remember-pin" style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;">' +
+    '<span class="chk-box' + (draft.rememberPin ? " on" : "") + '">' + (draft.rememberPin ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
+    '<span style="font-size:12px;color:#8A96A3;">تذكرني على هذا الجهاز</span></div>' +
+    "</div>";
+}
+
+function renderNew() {
+  var d = draft;
+  var unlocked = !!d.pinVerified;
+  var damagesListHtml = d.damages.length > 0
+    ? '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">' + d.damages.map(function (m) { return renderDamageListRow(m, true); }).join("") + "</div>"
+    : "";
+
+  var restHtml =
+    '<div class="section"><label class="label">المكان</label>' +
+    '<select class="input" data-field="place" style="margin-bottom:8px;">' +
+    PLACE_OPTIONS.map(function (p) { return '<option value="' + escapeHtml(p) + '"' + (d.place === p ? " selected" : "") + ">" + escapeHtml(p) + "</option>"; }).join("") +
+    "</select>" +
+    '<input class="input" data-field="placeNote" list="dl-placeNote" placeholder="تفاصيل إضافية عن المكان (اختياري)" value="' + escapeHtml(d.placeNote) + '" />' +
+    datalistHtml("dl-placeNote", "placeNote") +
+    '<div style="margin-top:10px;"><label class="label">التاريخ والوقت</label><input type="datetime-local" class="input" data-field="dateTime" value="' + d.dateTime + '" /></div>' +
+    "</div>" +
+
+    '<div class="section"><div class="row-between" style="margin-bottom:12px;"><div class="section-title" style="margin-bottom:0;">فحص الهيكل</div>' +
+    '<button type="button" data-action="undo-damage" ' + (d.damages.length === 0 ? "disabled" : "") + ' style="background:#212934;border:none;border-radius:9px;display:flex;align-items:center;gap:5px;padding:6px 10px;opacity:' + (d.damages.length === 0 ? "0.45" : "1") + ';">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2.2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v0a5.5 5.5 0 01-5.5 5.5H11"/></svg>' +
+    '<span style="color:#EDF1F5;font-size:11.5px;font-weight:600;">تراجع عن آخر علامة</span></button></div>' +
+    '<div style="color:#8A96A3;font-size:12px;margin-bottom:10px;">اختر نوع الضرر ثم اضغط مباشرة على الجزء المتضرر من السيارة</div>' +
+    renderTypePicker(d.selectedType) +
+    renderCarDiagram(d.damages, { editable: true, theme: "dark", id: "new-diagram" }) +
+    damagesListHtml +
+    "</div>" +
+
+    '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div>' +
+    '<textarea class="input" data-field="mechanicNotes" rows="3" style="resize:none;" placeholder="أي ملاحظات ميكانيكية، أو داخل المقصورة (مقاعد، ديكور، رائحة، أعطال...)">' + escapeHtml(d.mechanicNotes) + "</textarea></div>" +
+
+    '<div class="section"><div class="section-title">التجهيزات</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+    CHECKLIST_ITEMS.map(function (item) {
+      var on = d.checklist[item.key];
+      return '<div style="display:flex;align-items:center;gap:8px;cursor:pointer;" data-action="toggle-checklist" data-key="' + item.key + '">' +
+        '<span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
+        '<span style="font-size:13px;color:#EDF1F5;">' + item.label + "</span></div>";
+    }).join("") + "</div>" +
+    '<div style="margin-top:10px;"><label class="label">أخرى</label><input class="input" data-field="otherText" list="dl-otherText" placeholder="بند إضافي" value="' + escapeHtml(d.otherText) + '" />' + datalistHtml("dl-otherText", "otherText") + "</div>" +
+    "</div>" +
+
+    '<div class="section"><div class="section-title">معلومات إضافية</div>' +
+    '<div style="margin-bottom:10px;"><label class="label">آخر سائق</label><input class="input" data-field="lastDriver" list="dl-lastDriver" value="' + escapeHtml(d.lastDriver) + '" />' + datalistHtml("dl-lastDriver", "lastDriver") + "</div>" +
+    '<div style="margin-bottom:10px;"><label class="label">تاريخ ووقت آخر سائق</label><input type="datetime-local" class="input" data-field="lastDriverDateTime" value="' + d.lastDriverDateTime + '" /></div>' +
+    '<div><label class="label">ملاحظات المرسل</label><textarea class="input" data-field="dispatchComments" list="dl-dispatchComments" rows="3" style="resize:none;">' + escapeHtml(d.dispatchComments) + "</textarea>" + datalistHtml("dl-dispatchComments", "dispatchComments") + "</div>" +
+    "</div>" +
+
+    (d.errorMsg ? '<div style="color:#F0526B;font-size:13px;text-align:center;margin-bottom:10px;">' + escapeHtml(d.errorMsg) + "</div>" : "");
+
+  var lockedWrap = unlocked
+    ? restHtml
+    : '<div style="position:relative;">' +
+        '<div style="filter:blur(6px);pointer-events:none;user-select:none;">' + restHtml + "</div>" +
+        '<div style="position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;padding-top:60px;">' +
+        '<div style="background:#12161D;border:1px solid #2A3340;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px -8px rgba(0,0,0,0.6);">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg>' +
+        '<span style="color:#8A96A3;font-size:12.5px;">أدخل رمز الفاحص الصحيح لفتح باقي الفحص</span></div></div></div>';
+
+  return '<div style="padding-bottom:110px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">فحص جديد</div>' +
+    '<button type="button" data-action="open-draft-print" ' + (unlocked ? "" : "disabled") + ' style="background:#212934;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;opacity:' + (unlocked ? "1" : "0.45") + ';">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>' +
+    '<span style="color:#EDF1F5;font-size:12px;font-weight:600;">طباعة</span></button></div>' +
+
+    '<div style="padding:0 18px;">' +
+    '<div class="section"><div class="section-title">بيانات الفحص</div>' +
+    '<div style="margin-bottom:10px;"><label class="label">رمز السيارة</label>' +
+    '<div style="display:flex;gap:8px;"><input class="input" data-field="carCode" list="dl-carCode" inputmode="numeric" pattern="[0-9]*" placeholder="مثال: 22721" value="' + escapeHtml(d.carCode) + '" style="flex:1;" />' +
+    '<button type="button" class="btn-secondary" data-action="lookup-past" style="white-space:nowrap;padding:10px 12px;">🔍 فحوصات سابقة</button></div>' +
+    '<datalist id="dl-carCode">' + getVehicles().map(function (v) { return '<option value="' + escapeHtml(v) + '"></option>'; }).join("") + "</datalist></div>" +
+    renderDriverIdentityBlock() +
+    "</div>" +
+
+    renderPastInspections() +
+
+    lockedWrap +
+    "</div>" +
+
+    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #10141B 60%, transparent);max-width:480px;margin:0 auto;">' +
+    '<button type="button" class="btn-primary" data-action="save-inspection" style="width:100%;opacity:' + (!unlocked ? "0.45" : d.saving ? "0.7" : "1") + ';" ' + (!unlocked || d.saving ? "disabled" : "") + ">" + (d.saving ? "جاري الحفظ..." : "حفظ الفحص") + "</button></div>" +
+    "</div>";
+}
+
+function renderDetail() {
+  var record = inspectionsCache[state.selectedId] || null;
+  if (!record) {
+    return '<div style="padding:0 18px;"><div style="display:flex;align-items:center;gap:10px;padding:20px 0 12px;">' +
+      '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+      '<div style="color:#EDF1F5;font-size:17px;font-weight:800;">تفاصيل الفحص</div></div>' +
+      '<div class="section" style="text-align:center;"><div style="color:#EDF1F5;font-size:14px;">تعذّر العثور على هذا الفحص</div></div></div>';
+  }
+  var damages = record.damages || [];
+  var damagesHtml = damages.length === 0
+    ? '<div style="color:#8A96A3;font-size:13px;margin-top:10px;">لا توجد ملاحظات مسجّلة — السيارة سليمة</div>'
+    : '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">' + damages.map(function (m) { return renderDamageListRow(m, false); }).join("") + "</div>";
+
+  function row(label, value) {
+    return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #212934;"><span style="color:#8A96A3;font-size:12px;">' + label + '</span><span style="color:#EDF1F5;font-size:13px;">' + escapeHtml(value || "—") + "</span></div>";
+  }
+
+  var checklistHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + CHECKLIST_ITEMS.map(function (item) {
+    var on = (record.checklist || {})[item.key];
+    return '<div style="display:flex;align-items:center;gap:8px;"><span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + '</span><span style="font-size:13px;color:#EDF1F5;">' + item.label + "</span></div>";
+  }).join("") + "</div>";
+
+  var placeLine = record.place + (record.placeNote ? " — " + escapeHtml(record.placeNote) : "");
+
+  return '<div style="padding-bottom:40px;">' +
+    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">تفاصيل الفحص</div>' +
+    '<button type="button" data-action="open-print" data-id="' + record.id + '" style="background:#212934;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>' +
+    '<span style="color:#EDF1F5;font-size:12px;font-weight:600;">طباعة</span></button></div>' +
+
+    '<div style="padding:0 18px;">' +
+    '<div class="section"><div class="section-title">بيانات الفحص</div>' + row("رمز السيارة", record.carCode) + row("الفاحص", record.driver) + row("المكان", placeLine) + row("التاريخ والوقت", formatDT(record.dateTime)) + "</div>" +
+    '<div class="section"><div class="section-title">حالة الهيكل</div>' + renderLegend() + renderCarDiagram(damages, { editable: false, theme: "dark" }) + damagesHtml + "</div>" +
+    '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div><div style="color:' + (record.mechanicNotes ? "#EDF1F5" : "#8A96A3") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div></div>" +
+    '<div class="section"><div class="section-title">التجهيزات</div>' + checklistHtml + (record.otherText ? '<div style="margin-top:8px;font-size:13px;color:#8A96A3;">أخرى: ' + escapeHtml(record.otherText) + "</div>" : "") + "</div>" +
+    '<div class="section"><div class="section-title">هوية الفاحص</div>' + row("الفاحص", record.driver) +
+    '<div style="display:flex;align-items:center;gap:6px;color:#4FD9C6;font-size:13px;margin-top:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4FD9C6" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> تم تأكيد الهوية عبر الرمز الشخصي بتاريخ ' + formatDT(record.driverConfirmedAt) + "</div></div>" +
+    '<div class="section"><div class="section-title">معلومات إضافية</div>' + row("آخر سائق", record.lastDriver) + row("تاريخ ووقت آخر سائق", formatDT(record.lastDriverDateTime)) + row("ملاحظات المرسل", record.dispatchComments) + "</div>" +
+    "</div></div>";
+}
+
+function renderPrintOverlay() {
+  if (!state.printRecord) return "";
+  var record = state.printRecord;
+  return '<div id="print-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
+    '<div style="width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
+    '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #2A3340;">' +
+    '<div style="color:#EDF1F5;font-size:15px;font-weight:700;">معاينة التقرير</div>' +
+    '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
+    '<div class="print-scrollwrap" style="overflow-y:auto;padding:14px;"><div id="print-area">' + renderReport(record) + "</div></div>" +
+    '<div class="no-print" style="padding:14px;border-top:1px solid #2A3340;">' +
+    '<button type="button" class="btn-primary" data-action="do-print" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;opacity:' + (state.printSaving ? "0.7" : "1") + ';">' +
+    (state.printSaving
+      ? '<span class="spin">⟳</span> جارٍ التجهيز...'
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg> طباعة / حفظ كصورة') +
+    "</button></div></div></div>";
+}
+
+/* =================================================================
+   Root render
+================================================================= */
+var scrollSave = 0;
+function render(preserveScroll) {
+  var app = document.getElementById("app");
+  if (preserveScroll) scrollSave = window.scrollY;
+  var html = "";
+  if (state.screen === "home") html = renderHome();
+  else if (state.screen === "new") html = renderNew();
+  else if (state.screen === "detail") html = renderDetail();
+  else if (state.screen === "vehicles") html = renderVehicles();
+  else if (state.screen === "reports") html = renderReports();
+  app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay();
+  if (preserveScroll) window.scrollTo(0, scrollSave);
+}
+
+/* =================================================================
+   Actions
+================================================================= */
+function goHome() { state.screen = "home"; state.selectedId = null; render(); }
+function goNew() {
+  draft = freshDraft();
+  var remembered = lsGet("vi_remembered_pin", null);
+  if (remembered) {
+    draft.rememberPin = true;
+    draft.pinTry = remembered;
+    checkInspectorCode();
+  }
+  state.screen = "new";
+  render();
+}
+function openDetail(id) { state.selectedId = id; state.screen = "detail"; render(); }
+function goVehicles() { state.newVehicleCode = ""; state.vehicleError = ""; state.screen = "vehicles"; render(); }
+function goReports() { state.reportsCarQuery = ""; state.reportsDriverFilter = ""; state.screen = "reports"; render(); }
+
+function handleAddVehicle() {
+  var res = addVehicle(state.newVehicleCode);
+  if (!res.ok) { state.vehicleError = res.msg; render(); return; }
+  state.newVehicleCode = "";
+  state.vehicleError = "";
+  render();
+}
+
+function lookupPast() {
+  var code = draft.carCode.trim().toLowerCase();
+  if (!code) return;
+  draft.pastLoading = true;
+  render();
+  setTimeout(function () {
+    var matches = inspectionsIndex.filter(function (it) { return (it.carCode || "").toLowerCase() === code; }).slice(0, 3);
+    draft.pastInspections = matches.map(function (m) { return inspectionsCache[m.id]; }).filter(Boolean);
+    draft.pastLoading = false;
+    render();
+  }, 120);
+}
+
+function handleDiagramTap(diagramEl, e) {
+  var rect = diagramEl.getBoundingClientRect();
+  var xFrac = (e.clientX - rect.left) / rect.width;
+  var yFrac = (e.clientY - rect.top) / rect.height;
+  if (xFrac < 0 || xFrac > 1 || yFrac < 0 || yFrac > 1) return;
+  var near = findNearMark(draft.damages, xFrac, yFrac);
+  if (!near) {
+    draft.damages.push({ id: uid(), x: xFrac, y: yFrac, type: draft.selectedType, note: "" });
+  } else if (near.type === draft.selectedType) {
+    draft.damages = draft.damages.filter(function (d) { return d.id !== near.id; });
+  } else {
+    near.type = draft.selectedType;
+    if (draft.selectedType !== "O") near.note = "";
+  }
+  render();
+}
+
+function undoLastDamage() {
+  if (draft.damages.length === 0) return;
+  draft.damages.pop();
+  render();
+}
+
+function buildRecord() {
+  return {
+    carCode: draft.carCode.trim(),
+    driver: draft.driver,
+    driverConfirmedAt: draft.driverConfirmedAt,
+    place: draft.place,
+    placeNote: draft.placeNote.trim(),
+    dateTime: draft.dateTime,
+    damages: draft.damages,
+    mechanicNotes: draft.mechanicNotes.trim(),
+    checklist: draft.checklist,
+    otherText: draft.otherText.trim(),
+    lastDriver: draft.lastDriver.trim(),
+    lastDriverDateTime: draft.lastDriverDateTime,
+    dispatchComments: draft.dispatchComments.trim()
+  };
+}
+
+function saveInspection() {
+  if (!draft.carCode.trim()) { draft.errorMsg = "الرجاء إدخال رمز السيارة"; render(); return; }
+  if (!draft.pinVerified || !draft.driver) { draft.errorMsg = "الرجاء إدخال رمز الفاحص الصحيح أولاً"; render(); return; }
+  if (!db) { draft.errorMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا — تحقق من الإنترنت وحاول مرة أخرى"; render(); return; }
+
+  draft.errorMsg = "";
+  draft.saving = true;
+  render();
+
+  var id = uid();
+  var record = Object.assign({ id: id, createdAt: nowIso() }, buildRecord());
+
+  db.collection("inspections").doc(id).set(record).then(function () {
+    // remember what was typed, for the "smart" fields next time
+    pushHistory("placeNote", record.placeNote);
+    pushHistory("otherText", record.otherText);
+    pushHistory("lastDriver", record.lastDriver);
+    pushHistory("dispatchComments", record.dispatchComments);
+
+    draft.saving = false;
+    goHome();
+  }).catch(function (e) {
+    console.error("save failed", e);
+    draft.saving = false;
+    draft.errorMsg = "تعذّر الحفظ: تحقق من الإنترنت وحاول مرة أخرى";
+    render();
+  });
+}
+
+function checkInspectorCode() {
+  var entered = draft.pinTry.trim();
+  if (!/^[0-9]{4}$/.test(entered)) return;
+  hashPin(entered).then(function (hash) {
+    var match = DRIVERS.find(function (name) { return lsGet("vi_pin_" + name, null) === hash; });
+    if (match) {
+      draft.driver = match;
+      draft.pinVerified = true;
+      draft.driverConfirmedAt = nowIso();
+      draft.pinError = "";
+      draft.pinTry = "";
+      if (draft.rememberPin) { lsSet("vi_remembered_pin", entered); }
+      else { localStorage.removeItem("vi_remembered_pin"); }
+    } else {
+      draft.pinError = "رمز غير صحيح";
+      draft.pinTry = "";
+      if (lsGet("vi_remembered_pin", null) === entered) { localStorage.removeItem("vi_remembered_pin"); }
+    }
+    render();
+  });
+}
+
+/* =================================================================
+   PNG capture + native share / download (used by the print modal)
+================================================================= */
+function domNodeToPngDataUrl(node) {
+  var rect = node.getBoundingClientRect();
+  var width = Math.ceil(rect.width);
+  var height = Math.ceil(rect.height);
+  var clone = node.cloneNode(true);
+  clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+  var svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
+    '<foreignObject width="100%" height="100%">' + new XMLSerializer().serializeToString(clone) + "</foreignObject></svg>";
+  var svgDataUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgString);
+  return new Promise(function (resolve, reject) {
+    var img = new Image();
+    img.onload = function () {
+      var scale = 2;
+      var canvas = document.createElement("canvas");
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      var ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = svgDataUrl;
+  });
+}
+
+function shareOrDownloadPng(dataUrl, filename) {
+  return fetch(dataUrl).then(function (res) { return res.blob(); }).then(function (blob) {
+    var file = new File([blob], filename, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      return navigator.share({ files: [file], title: "تقرير فحص السيارة" });
+    }
+    var a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }).catch(function (e) {
+    console.error("image save failed", e);
+    var a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+}
+
+function doPrint() {
+  state.printSaving = true;
+  render();
+  var node = document.getElementById("print-area");
+  var done = function () {
+    state.printSaving = false;
+    render();
+    window.print();
+  };
+  if (!node) { done(); return; }
+  domNodeToPngDataUrl(node).then(function (dataUrl) {
+    var filename = "تقرير-فحص-" + (state.printRecord && state.printRecord.carCode ? state.printRecord.carCode : "سيارة") + ".png";
+    return shareOrDownloadPng(dataUrl, filename);
+  }).catch(function (e) { console.error(e); }).then(done);
+}
+
+/* =================================================================
+   Event delegation
+================================================================= */
+function fitReportToOnePage() {
+  var card = document.querySelector(".vi-report-card");
+  if (!card) return;
+  card.style.zoom = "1";
+  var height = card.getBoundingClientRect().height;
+  var budgetPx = 1030; // usable A4 height at 96dpi with the 12mm @page margin
+  if (height > budgetPx) {
+    var scale = Math.max(0.62, budgetPx / height);
+    card.style.zoom = scale;
+  }
+}
+window.addEventListener("beforeprint", fitReportToOnePage);
+window.addEventListener("afterprint", function () {
+  var card = document.querySelector(".vi-report-card");
+  if (card) card.style.zoom = "1";
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  seedDriverPins();
+  initCloud();
+  var app = document.getElementById("app");
+
+  app.addEventListener("click", function (e) {
+    var diagram = e.target.closest('[data-diagram="editable"]');
+    if (diagram) { handleDiagramTap(diagram, e); return; }
+
+    if (e.target.id === "print-overlay") { state.printRecord = null; render(); return; }
+
+    var t = e.target.closest("[data-action]");
+    if (!t) return;
+    var action = t.dataset.action;
+
+    if (action === "close-print") { state.printRecord = null; render(); }
+    else if (action === "go-home") goHome();
+    else if (action === "go-new") goNew();
+    else if (action === "go-vehicles") goVehicles();
+    else if (action === "go-reports") goReports();
+    else if (action === "filter-by-driver") { state.reportsDriverFilter = state.reportsDriverFilter === t.dataset.driver ? "" : t.dataset.driver; render(); }
+    else if (action === "clear-home-date") { state.homeDate = ""; render(); }
+    else if (action === "add-vehicle") handleAddVehicle();
+    else if (action === "open-detail") openDetail(t.dataset.id);
+    else if (action === "lookup-past") lookupPast();
+    else if (action === "select-type") { draft.selectedType = t.dataset.type; render(); }
+    else if (action === "remove-damage") { draft.damages = draft.damages.filter(function (d) { return d.id !== t.dataset.id; }); render(); }
+    else if (action === "undo-damage") { undoLastDamage(); }
+    else if (action === "toggle-checklist") { draft.checklist[t.dataset.key] = !draft.checklist[t.dataset.key]; render(); }
+    else if (action === "toggle-remember-pin") { draft.rememberPin = !draft.rememberPin; render(); }
+    else if (action === "save-inspection") saveInspection();
+    else if (action === "reset-pin-check") { draft.driver = ""; draft.pinVerified = false; draft.pinError = ""; draft.pinTry = ""; render(); }
+    else if (action === "open-print") { state.printRecord = inspectionsCache[t.dataset.id] || null; render(); }
+    else if (action === "open-draft-print") { state.printRecord = buildRecord(); render(); }
+    else if (action === "print-past") { state.printRecord = inspectionsCache[t.dataset.id] || null; render(); }
+    else if (action === "do-print") doPrint();
+  });
+
+  app.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t.id === "home-search") {
+      state.homeQuery = t.value;
+      var selStart = t.selectionStart, selEnd = t.selectionEnd;
+      render();
+      var el = document.getElementById("home-search");
+      if (el) { el.focus(); el.setSelectionRange(selStart, selEnd); }
+      return;
+    }
+    if (t.id === "reports-car-query") {
+      t.value = t.value.replace(/[^0-9]/g, "");
+      state.reportsCarQuery = t.value;
+      var rSelStart = t.selectionStart, rSelEnd = t.selectionEnd;
+      render();
+      var rEl = document.getElementById("reports-car-query");
+      if (rEl) { rEl.focus(); rEl.setSelectionRange(rSelStart, rSelEnd); }
+      return;
+    }
+    var noteId = t.dataset.noteId;
+    if (noteId) {
+      var mark = draft.damages.find(function (d) { return d.id === noteId; });
+      if (mark) mark.note = t.value;
+      return;
+    }
+    var field = t.dataset.field;
+    if (!field) return;
+    if (field === "homeDate") { state.homeDate = t.value; render(); return; }
+    if (field === "newVehicleCode") { t.value = t.value.replace(/[^0-9]/g, ""); state.newVehicleCode = t.value; return; }
+    if (field === "carCode") { t.value = t.value.replace(/[^0-9]/g, ""); draft.carCode = t.value; return; }
+    if (field === "pinTry") {
+      t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4);
+      draft.pinTry = t.value;
+      draft.pinError = "";
+      if (draft.pinTry.length === 4) checkInspectorCode();
+      return;
+    }
+    draft[field] = t.value;
+  });
+
+  app.addEventListener("change", function (e) {
+    var t = e.target;
+    var field = t.dataset.field;
+    if (!field) return;
+    if (field === "place") { draft.place = t.value; render(); return; }
+    draft[field] = t.value;
+  });
+
+  render();
+});
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function (e) { console.warn("service worker registration failed:", e); });
+  });
+}
+</script>
+</body>
+</html>
