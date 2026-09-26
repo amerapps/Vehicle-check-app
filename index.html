@@ -1426,6 +1426,15 @@ function render(preserveScroll) {
    Actions
 ================================================================= */
 function goHome() { state.screen = "home"; state.selectedId = null; render(); }
+function goBack() {
+  // Mirrors whatever the visible back/close button on the current screen does,
+  // so a swipe gesture always lands where the on-screen arrow would.
+  if (state.printRecord || state.printBatch) { state.printRecord = null; state.printBatch = null; render(); return; }
+  if (state.screen === "adminEditReport") { state.screen = "detail"; render(); return; }
+  if (state.screen === "adminPins" || state.screen === "adminAdmins") { state.screen = "admin"; render(); return; }
+  if (state.screen === "home") return;
+  goHome();
+}
 function goNew() {
   draft = freshDraft();
   var remembered = lsGet("vi_remembered_pin", null);
@@ -1816,6 +1825,26 @@ window.addEventListener("afterprint", function () {
 document.addEventListener("DOMContentLoaded", function () {
   initCloud();
   var app = document.getElementById("app");
+
+  // Swipe left or right anywhere on screen (except inputs/the tap-diagram) to go back,
+  // the same as tapping the screen's own back/close button.
+  var swipeStartX = null, swipeStartY = null, swipeStartTime = 0, swipeTracking = false;
+  app.addEventListener("touchstart", function (e) {
+    if (e.touches.length !== 1 || e.target.closest('input, textarea, select, [data-diagram]')) { swipeTracking = false; return; }
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    swipeStartTime = Date.now();
+    swipeTracking = true;
+  }, { passive: true });
+  app.addEventListener("touchend", function (e) {
+    if (!swipeTracking) return;
+    swipeTracking = false;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - swipeStartX;
+    var dy = t.clientY - swipeStartY;
+    var dt = Date.now() - swipeStartTime;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < 600) goBack();
+  }, { passive: true });
 
   app.addEventListener("click", function (e) {
     var diagram = e.target.closest('[data-diagram="editable"]');
