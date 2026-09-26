@@ -55,7 +55,7 @@
   .chk-box.on { background: var(--ios-blue); border: none; }
   .type-btn { border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; border: 1px solid var(--ios-sep); background: var(--ios-card2); }
   .type-btn.sel { }
-  .ios-header { position: sticky !important; top: 0 !important; z-index: 5; padding-top: calc(30px + env(safe-area-inset-top, 0px)) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(0,0,0,0.78); border-bottom: 0.5px solid var(--ios-sep); }
+  .ios-header { position: sticky !important; top: 0 !important; z-index: 5; padding-top: calc(20px + env(safe-area-inset-top, 0px)) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(0,0,0,0.78); border-bottom: 0.5px solid var(--ios-sep); }
   @media print {
     #screen-root { display: none !important; }
     #print-overlay { position: static !important; inset: auto !important; background: none !important; display: block !important; height: auto !important; }
@@ -630,12 +630,7 @@ function applyLanguage() {
   root.querySelectorAll("img[alt]").forEach(function (el) { translateAttr(el, "alt"); });
 }
 
-function renderLangToggle() {
-  var isEn = state.lang === "en";
-  return '<button type="button" class="no-print" data-action="toggle-lang" style="position:fixed;top:calc(10px + env(safe-area-inset-top,0px));' + (isEn ? "left" : "right") + ':12px;z-index:70;background:#2C2C2E;border:1px solid #38383A;border-radius:999px;padding:6px 12px;color:#FFFFFF;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;">' +
-    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20 15 15 0 010-20z"/></svg>' +
-    (isEn ? "العربية" : "English") + "</button>";
-}
+/* Language toggle now lives inline next to the app title in renderHome() */
 
 /* =================================================================
    App state
@@ -909,13 +904,15 @@ function renderHome() {
   }
 
   return '<div style="padding-bottom:90px;">' +
-    '<div style="padding:calc(52px + env(safe-area-inset-top, 0px)) 18px 8px;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">' +
+    '<div style="padding:22px 18px 8px;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">' +
     '<div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#0A84FF,#0060DF);display:flex;align-items:center;justify-content:center;">' +
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></div>' +
-    '<div style="flex:1;"><div style="color:#FFFFFF;font-size:19px;font-weight:800;">فحص السيارات</div><div style="color:#8E8E93;font-size:12px;">سجل الفحوصات الدوري</div></div>' +
+    '<div style="flex:1;"><div style="color:#FFFFFF;font-size:19px;font-weight:800;">فحص السيارات</div>' +
+    '<div style="color:#8E8E93;font-size:12px;">سجل الفحوصات الدوري</div></div>' +
     '<button type="button" class="btn-icon" data-action="go-reports" title="التقارير"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M9 17v-6M12 17v-10M15 17v-3M4 21h16"/></svg></button>' +
     '<button type="button" class="btn-icon" data-action="go-vehicles" title="المركبات"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></button>' +
     '<button type="button" class="btn-icon" data-action="go-admin" title="لوحة الإدارة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg></button>' +
+    '<button type="button" class="btn-icon no-print" data-action="toggle-lang" title="En-Ar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20 15 15 0 010-20z"/></svg></button>' +
     "</div></div>" +
     cloudBanner +
     '<div style="padding:12px 18px;display:flex;gap:8px;">' +
@@ -1012,21 +1009,23 @@ function renderReports() {
       : "") +
     "</div>" +
 
-    '<div class="section"><div class="section-title">حسب الفاحص</div>' +
-    '<div style="display:flex;flex-direction:column;">' +
-    driverList.map(function (d) {
-      var active = state.reportsDriverFilter === d;
-      return '<div data-action="filter-by-driver" data-driver="' + escapeHtml(d) + '" style="display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid #38383A;cursor:pointer;border-radius:8px;' + (active ? "background:#2C2C2E;" : "") + '">' +
-        '<span style="color:#FFFFFF;font-size:13.5px;">' + escapeHtml(d) + '</span>' +
-        '<span style="color:#8E8E93;font-size:12px;">' + (driverCounts[d] || 0) + " فحص</span></div>";
-    }).join("") +
-    "</div>" +
-    (filterDriver
-      ? ('<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">' +
-          (driverMatches.length ? driverMatches.map(row).join("") : '<div style="color:#8E8E93;font-size:12px;">لا توجد فحوصات لهذا الفاحص</div>') +
-          "</div>")
+    (state.adminUnlocked
+      ? '<div class="section"><div class="section-title">حسب الفاحص</div>' +
+        '<div style="display:flex;flex-direction:column;">' +
+        driverList.map(function (d) {
+          var active = state.reportsDriverFilter === d;
+          return '<div data-action="filter-by-driver" data-driver="' + escapeHtml(d) + '" style="display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid #38383A;cursor:pointer;border-radius:8px;' + (active ? "background:#2C2C2E;" : "") + '">' +
+            '<span style="color:#FFFFFF;font-size:13.5px;">' + escapeHtml(d) + '</span>' +
+            '<span style="color:#8E8E93;font-size:12px;">' + (driverCounts[d] || 0) + " فحص</span></div>";
+        }).join("") +
+        "</div>" +
+        (filterDriver
+          ? ('<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">' +
+              (driverMatches.length ? driverMatches.map(row).join("") : '<div style="color:#8E8E93;font-size:12px;">لا توجد فحوصات لهذا الفاحص</div>') +
+              "</div>")
+          : "") +
+        "</div>"
       : "") +
-    "</div>" +
 
     "</div></div>";
 }
@@ -1418,7 +1417,7 @@ function render(preserveScroll) {
   else if (state.screen === "adminPins") html = state.adminUnlocked ? renderAdminDrivers() : renderAdminGate();
   else if (state.screen === "adminAdmins") html = state.adminUnlocked ? renderAdminAdmins() : renderAdminGate();
   else if (state.screen === "adminEditReport") html = state.adminUnlocked ? renderAdminEditReport() : renderAdminGate();
-  app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay() + renderBatchPrintOverlay() + renderLangToggle();
+  app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay() + renderBatchPrintOverlay();
   applyLanguage();
   if (preserveScroll) window.scrollTo(0, scrollSave);
 }
