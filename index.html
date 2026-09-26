@@ -407,6 +407,7 @@ var state = {
   homeDate: "",
   printRecord: null,
   printSaving: false,
+  printBatch: null,
   newVehicleCode: "",
   vehicleError: "",
   reportsCarQuery: "",
@@ -614,6 +615,28 @@ function renderReport(record) {
 /* =================================================================
    Screens
 ================================================================= */
+function getInspectionsForDate(dateISO) {
+  if (!dateISO) return [];
+  function pad(n) { return String(n).padStart(2, "0"); }
+  var matches = inspectionsIndex.filter(function (it) {
+    var d = it.dateTime ? new Date(it.dateTime) : null;
+    if (!d || isNaN(d.getTime())) return false;
+    var isoDate = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    return isoDate === dateISO;
+  });
+  return matches
+    .map(function (it) { return inspectionsCache[it.id]; })
+    .filter(Boolean)
+    .sort(function (a, b) { return new Date(a.dateTime) - new Date(b.dateTime); });
+}
+
+function openBatchPrint(dateISO) {
+  var records = getInspectionsForDate(dateISO);
+  if (records.length === 0) return;
+  state.printBatch = { date: dateISO, records: records };
+  render();
+}
+
 function renderHome() {
   var index = inspectionsIndex;
   var q = state.homeQuery.trim().toLowerCase();
@@ -668,7 +691,13 @@ function renderHome() {
     '<input class="input" id="home-search" value="' + escapeHtml(state.homeQuery) + '" placeholder="ابحث برمز السيارة، المكان، أو الفاحص" style="flex:1;" />' +
     '<input class="input" type="date" data-field="homeDate" value="' + escapeHtml(state.homeDate) + '" title="التقويم — الرجوع لفحص قديم" style="width:150px;flex-shrink:0;" />' +
     "</div>" +
-    (state.homeDate ? '<div style="padding:0 18px 8px;display:flex;justify-content:flex-end;"><button type="button" data-action="clear-home-date" style="background:none;border:none;color:#636366;font-size:11.5px;text-decoration:underline;">مسح فلتر التاريخ (' + formatDateOnly(state.homeDate) + ")</button></div>" : "") +
+    (state.homeDate ? '<div style="padding:0 18px 8px;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+      (filtered.length
+        ? '<button type="button" data-action="print-day" style="background:#1C1C1E;border:1px solid #38383A;color:#0A84FF;font-size:12px;font-weight:700;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:6px;">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>' +
+          "طباعة / حفظ فحوصات هذا اليوم (" + filtered.length + ")</button>"
+        : "<div></div>") +
+      '<button type="button" data-action="clear-home-date" style="background:none;border:none;color:#636366;font-size:11.5px;text-decoration:underline;white-space:nowrap;">مسح فلتر التاريخ (' + formatDateOnly(state.homeDate) + ")</button></div>" : "") +
     '<div style="padding:4px 18px;">' + listHtml + "</div>" +
     '<button type="button" data-action="go-new" class="btn-primary" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:min(90%,420px);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 30px -8px rgba(79,217,198,0.5);">' +
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> فحص جديد</button>' +
@@ -1125,6 +1154,26 @@ function renderPrintOverlay() {
     "</button></div></div></div>";
 }
 
+function renderBatchPrintOverlay() {
+  if (!state.printBatch) return "";
+  var batch = state.printBatch;
+  var reportsHtml = batch.records.map(function (rec, i) {
+    var pageBreak = i < batch.records.length - 1 ? "page-break-after:always;" : "";
+    return '<div style="' + pageBreak + (i > 0 ? "margin-top:14px;" : "") + '">' + renderReport(rec) + "</div>";
+  }).join("");
+  return '<div id="print-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
+    '<div style="width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
+    '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #38383A;">' +
+    '<div style="color:#FFFFFF;font-size:15px;font-weight:700;">فحوصات يوم ' + formatDateOnly(batch.date) + " (" + batch.records.length + ")</div>" +
+    '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
+    '<div class="print-scrollwrap" style="overflow-y:auto;padding:14px;"><div id="print-area">' + reportsHtml + "</div></div>" +
+    '<div class="no-print" style="padding:14px;border-top:1px solid #38383A;">' +
+    '<button type="button" class="btn-primary" data-action="do-print-batch" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg> طباعة / حفظ كملف PDF</button>' +
+    '<div style="color:#8E8E93;font-size:11px;margin-top:8px;text-align:center;">في نافذة الطباعة، اختر "حفظ كـ PDF" لحفظ كل التقارير في ملف واحد على الكمبيوتر</div>' +
+    "</div></div></div>";
+}
+
 /* =================================================================
    Root render
 ================================================================= */
@@ -1142,7 +1191,7 @@ function render(preserveScroll) {
   else if (state.screen === "adminPins") html = state.adminUnlocked ? renderAdminDrivers() : renderAdminGate();
   else if (state.screen === "adminAdmins") html = state.adminUnlocked ? renderAdminAdmins() : renderAdminGate();
   else if (state.screen === "adminEditReport") html = state.adminUnlocked ? renderAdminEditReport() : renderAdminGate();
-  app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay();
+  app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay() + renderBatchPrintOverlay();
   if (preserveScroll) window.scrollTo(0, scrollSave);
 }
 
@@ -1576,24 +1625,33 @@ function doPrint() {
   }).catch(function (e) { console.error(e); }).then(done);
 }
 
+function doPrintBatch() {
+  if (!state.printBatch) return;
+  var oldTitle = document.title;
+  document.title = "فحوصات-" + state.printBatch.date;
+  window.print();
+  document.title = oldTitle;
+}
+
 /* =================================================================
    Event delegation
 ================================================================= */
 function fitReportToOnePage() {
-  var card = document.querySelector(".vi-report-card");
-  if (!card) return;
-  card.style.zoom = "1";
-  var height = card.getBoundingClientRect().height;
+  var cards = document.querySelectorAll(".vi-report-card");
   var budgetPx = 1030; // usable A4 height at 96dpi with the 12mm @page margin
-  if (height > budgetPx) {
-    var scale = Math.max(0.62, budgetPx / height);
-    card.style.zoom = scale;
-  }
+  cards.forEach(function (card) {
+    card.style.zoom = "1";
+    var height = card.getBoundingClientRect().height;
+    if (height > budgetPx) {
+      var scale = Math.max(0.62, budgetPx / height);
+      card.style.zoom = scale;
+    }
+  });
 }
 window.addEventListener("beforeprint", fitReportToOnePage);
 window.addEventListener("afterprint", function () {
-  var card = document.querySelector(".vi-report-card");
-  if (card) card.style.zoom = "1";
+  var cards = document.querySelectorAll(".vi-report-card");
+  cards.forEach(function (card) { card.style.zoom = "1"; });
 });
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -1604,19 +1662,20 @@ document.addEventListener("DOMContentLoaded", function () {
     var diagram = e.target.closest('[data-diagram="editable"]');
     if (diagram) { handleDiagramTap(diagram, e); return; }
 
-    if (e.target.id === "print-overlay") { state.printRecord = null; render(); return; }
+    if (e.target.id === "print-overlay") { state.printRecord = null; state.printBatch = null; render(); return; }
 
     var t = e.target.closest("[data-action]");
     if (!t) return;
     var action = t.dataset.action;
 
-    if (action === "close-print") { state.printRecord = null; render(); }
+    if (action === "close-print") { state.printRecord = null; state.printBatch = null; render(); }
     else if (action === "go-home") goHome();
     else if (action === "go-new") goNew();
     else if (action === "go-vehicles") goVehicles();
     else if (action === "go-reports") goReports();
     else if (action === "filter-by-driver") { state.reportsDriverFilter = state.reportsDriverFilter === t.dataset.driver ? "" : t.dataset.driver; render(); }
     else if (action === "clear-home-date") { state.homeDate = ""; render(); }
+    else if (action === "print-day") openBatchPrint(state.homeDate);
     else if (action === "add-vehicle") handleAddVehicle();
     else if (action === "delete-vehicle") deleteVehicle(t.dataset.code);
     else if (action === "open-detail") openDetail(t.dataset.id);
@@ -1632,6 +1691,7 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "open-draft-print") { state.printRecord = buildRecord(); render(); }
     else if (action === "print-past") { state.printRecord = inspectionsCache[t.dataset.id] || null; render(); }
     else if (action === "do-print") doPrint();
+    else if (action === "do-print-batch") doPrintBatch();
     else if (action === "go-admin") goAdmin();
     else if (action === "go-admin-menu") { state.screen = "admin"; render(); }
     else if (action === "go-admin-pins") goAdminPins();
