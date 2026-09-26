@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<meta name="theme-color" content="#10141B" />
+<meta name="theme-color" content="#000000" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -15,29 +15,47 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
 <style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: radial-gradient(circle at 50% 0%, #161D26 0%, #10141B 55%); font-family: 'Tajawal','Segoe UI',Tahoma,Arial,sans-serif; color: #EDF1F5; }
+  :root {
+    --ios-bg: #000000;
+    --ios-bg-elev: #1C1C1E;
+    --ios-card: #1C1C1E;
+    --ios-card2: #2C2C2E;
+    --ios-sep: #38383A;
+    --ios-blue: #0A84FF;
+    --ios-blue-dark: #0066CC;
+    --ios-red: #FF453A;
+    --ios-orange: #FF9F0A;
+    --ios-green: #30D158;
+    --ios-label: #FFFFFF;
+    --ios-label2: #8E8E93;
+    --ios-label3: #636366;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--ios-bg); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif; color: var(--ios-label); -webkit-font-smoothing: antialiased; }
   input, textarea, select, button { font-family: inherit; }
-  input::placeholder, textarea::placeholder { color: #5C6773; }
-  button { cursor: pointer; }
+  input::placeholder, textarea::placeholder { color: var(--ios-label2); }
+  button { cursor: pointer; transition: opacity .12s ease; }
+  button:active { opacity: 0.55; }
   #app { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
-  .input { width: 100%; background: #12161D; border: 1px solid #2A3340; border-radius: 10px; padding: 10px 12px; color: #EDF1F5; font-size: 14px; outline: none; color-scheme: dark; }
-  select.input { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238A96A3' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 12px center; padding-left: 32px; }
-  .btn-primary { background: linear-gradient(135deg,#4FD9C6,#37B5A6); color: #0B1013; border: none; border-radius: 12px; padding: 13px 16px; font-size: 14px; font-weight: 700; }
-  .btn-secondary { background: #212934; color: #EDF1F5; border: 1px solid #2A3340; border-radius: 12px; padding: 13px 16px; font-size: 14px; font-weight: 600; }
+  .input { width: 100%; background: var(--ios-card2); border: 1px solid var(--ios-sep); border-radius: 12px; padding: 11px 13px; color: var(--ios-label); font-size: 15px; outline: none; color-scheme: dark; }
+  select.input { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 12px center; padding-left: 32px; }
+  .btn-primary { background: var(--ios-blue); color: #FFFFFF; border: none; border-radius: 14px; padding: 14px 16px; font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+  .btn-secondary { background: var(--ios-card2); color: var(--ios-blue); border: 1px solid var(--ios-sep); border-radius: 14px; padding: 14px 16px; font-size: 15px; font-weight: 600; }
+  .btn-danger { background: rgba(255,69,58,0.14); color: var(--ios-red); border: 1px solid rgba(255,69,58,0.3); border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 600; }
   .btn-icon { background: transparent; border: none; padding: 6px; }
-  .section { background: #1A2028; border: 1px solid #2A3340; border-radius: 16px; padding: 16px; margin-bottom: 14px; }
-  .section-title { color: #EDF1F5; font-size: 14px; font-weight: 700; margin-bottom: 12px; }
-  .label { font-size: 12px; color: #8A96A3; margin-bottom: 5px; display: block; }
+  .section { background: var(--ios-card); border: 1px solid var(--ios-sep); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
+  .section-title { color: var(--ios-label); font-size: 13px; font-weight: 600; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.3px; opacity: 0.7; }
+  .label { font-size: 12.5px; color: var(--ios-label2); margin-bottom: 5px; display: block; }
   .row-between { display: flex; justify-content: space-between; align-items: center; }
   .spin { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
   ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-thumb { background: #2A3340; border-radius: 3px; }
-  .chk-box { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid #3A4552; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
-  .chk-box.on { background: #4FD9C6; border: none; }
-  .type-btn { border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; border: 1px solid #2A3340; background: #212934; }
+  ::-webkit-scrollbar-thumb { background: var(--ios-sep); border-radius: 3px; }
+  .chk-box { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--ios-sep); background: var(--ios-card2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
+  .chk-box.on { background: var(--ios-blue); border: none; }
+  .type-btn { border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; border: 1px solid var(--ios-sep); background: var(--ios-card2); }
   .type-btn.sel { }
+  .ios-header { position: sticky !important; top: 0 !important; z-index: 5; padding-top: calc(20px + env(safe-area-inset-top, 0px)) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(0,0,0,0.78); border-bottom: 0.5px solid var(--ios-sep); }
   @media print {
     #screen-root { display: none !important; }
     #print-overlay { position: static !important; inset: auto !important; background: none !important; display: block !important; height: auto !important; }
@@ -301,6 +319,7 @@ function randomFourDigitCode() {
 ================================================================= */
 function getVehicles() { return vehiclesCache; }
 function addVehicle(code) {
+  if (!state.adminUnlocked) return { ok: false, msg: "إضافة المركبات متاحة فقط لحساب الإدارة" };
   code = String(code || "").trim();
   if (!/^[0-9]+$/.test(code)) return { ok: false, msg: "رمز المركبة يجب أن يكون أرقامًا فقط" };
   if (vehiclesCache.indexOf(code) !== -1) return { ok: false, msg: "رمز المركبة موجود مسبقًا في القائمة" };
@@ -308,6 +327,14 @@ function addVehicle(code) {
   vehiclesCache = [code].concat(vehiclesCache);
   db.collection("vehicles").doc(code).set({ code: code }).catch(function (e) { console.error(e); });
   return { ok: true };
+}
+function deleteVehicle(code) {
+  if (!state.adminUnlocked) return;
+  if (!db) return;
+  if (!window.confirm('هل أنت متأكد من حذف المركبة "' + code + '"؟')) return;
+  vehiclesCache = vehiclesCache.filter(function (v) { return v !== code; });
+  render();
+  db.collection("vehicles").doc(code).delete().catch(function (e) { console.error(e); });
 }
 
 /* =================================================================
@@ -365,9 +392,9 @@ function emptyChecklist() {
   return o;
 }
 function badgeColorFor(damages) {
-  if (damages.length === 0) return "#4FD9C6";
-  if (damages.some(function (d) { return d.type === "B"; })) return "#F0526B";
-  return "#F0A868";
+  if (damages.length === 0) return "#0A84FF";
+  if (damages.some(function (d) { return d.type === "B"; })) return "#FF453A";
+  return "#FF9F0A";
 }
 
 /* =================================================================
@@ -384,7 +411,14 @@ var state = {
   vehicleError: "",
   reportsCarQuery: "",
   reportsDriverFilter: "",
+  detailDeleteOpen: false,
+  detailDeletePinTry: "",
+  detailDeleteError: "",
   adminUnlocked: false,
+  adminSelfPinOpen: false,
+  adminSelfNewPin: "",
+  adminSelfPinMsg: "",
+  adminSelfPinMsgOk: false,
   adminName: "",
   adminPinTry: "",
   adminPinError: "",
@@ -405,6 +439,7 @@ function freshDraft() {
     driver: "",
     pinTry: "", pinError: "", pinVerified: false, rememberPin: false,
     driverConfirmedAt: "",
+    changePinOpen: false, newPin: "", changePinMsg: "", changePinMsgOk: false,
     place: PLACE_OPTIONS[0],
     placeNote: "",
     dateTime: nowDateTimeLocal(),
@@ -444,7 +479,7 @@ function renderCarDiagram(damages, opts) {
   }).join("");
   var img = isDark ? CAR_DIAGRAM_IMG_DARK : CAR_DIAGRAM_IMG;
   return '<div style="width:100%;display:flex;justify-content:center;">' +
-    '<div' + idAttr + ' class="' + (editable ? "" : "vi-diagram-box") + boxClass + '" data-diagram="' + (editable ? "editable" : "static") + '" style="position:relative;width:100%;max-width:' + size + 'px;background:' + (isDark ? "#12161D" : "#fff") + ';border:' + (isDark ? "1px solid #2A3340" : "none") + ';border-radius:12px;overflow:hidden;cursor:' + (editable ? "crosshair" : "default") + ';touch-action:manipulation;">' +
+    '<div' + idAttr + ' class="' + (editable ? "" : "vi-diagram-box") + boxClass + '" data-diagram="' + (editable ? "editable" : "static") + '" style="position:relative;width:100%;max-width:' + size + 'px;background:' + (isDark ? "#1C1C1E" : "#fff") + ';border:' + (isDark ? "1px solid #38383A" : "none") + ';border-radius:12px;overflow:hidden;cursor:' + (editable ? "crosshair" : "default") + ';touch-action:manipulation;">' +
     '<img src="' + img + '" alt="مخطط السيارة" draggable="false" style="width:100%;display:block;user-select:none;" />' +
     marksHtml +
     "</div></div>";
@@ -455,9 +490,9 @@ function renderTypePicker(selected) {
     Object.keys(TYPE_INFO).map(function (k) {
       var info = TYPE_INFO[k];
       var sel = k === selected;
-      return '<button type="button" class="type-btn" data-action="select-type" data-type="' + k + '" style="border:' + (sel ? "2px solid #4FD9C6" : "1px solid #2A3340") + ";background:" + (sel ? "#4FD9C61F" : "#212934") + '">' +
-        '<span style="font-size:18px;font-weight:800;color:#EDF1F5;font-family:Arial,Helvetica,sans-serif;line-height:1;">' + k + "</span>" +
-        '<span style="font-size:9.5px;color:#8A96A3;text-align:center;">' + info.label + "</span>" +
+      return '<button type="button" class="type-btn" data-action="select-type" data-type="' + k + '" style="border:' + (sel ? "2px solid #0A84FF" : "1px solid #38383A") + ";background:" + (sel ? "#0A84FF1F" : "#2C2C2E") + '">' +
+        '<span style="font-size:18px;font-weight:800;color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;line-height:1;">' + k + "</span>" +
+        '<span style="font-size:9.5px;color:#8E8E93;text-align:center;">' + info.label + "</span>" +
         "</button>";
     }).join("") + "</div>";
 }
@@ -467,8 +502,8 @@ function renderLegend() {
     Object.keys(TYPE_INFO).map(function (k) {
       var v = TYPE_INFO[k];
       return '<div style="display:flex;align-items:center;gap:5px;">' +
-        '<span style="width:15px;height:15px;border-radius:50%;background:#fff;border:1.4px solid #8A96A3;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#0B1013;">' + k + "</span>" +
-        '<span style="font-size:11px;color:#8A96A3;">' + v.label + "</span></div>";
+        '<span style="width:15px;height:15px;border-radius:50%;background:#fff;border:1.4px solid #8E8E93;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#FFFFFF;">' + k + "</span>" +
+        '<span style="font-size:11px;color:#8E8E93;">' + v.label + "</span></div>";
     }).join("") + "</div>";
 }
 
@@ -489,13 +524,13 @@ function renderDamageListRow(mark, editable) {
   if (isOther) {
     noteHtml = editable
       ? '<input class="input" data-note-id="' + mark.id + '" value="' + escapeHtml(mark.note || "") + '" placeholder="اشرح نوع الضرر..." style="margin-top:8px;padding:7px 10px;font-size:12px;" />'
-      : (mark.note ? '<div style="color:#8A96A3;font-size:11px;margin-top:4px;">' + escapeHtml(mark.note) + "</div>" : "");
+      : (mark.note ? '<div style="color:#8E8E93;font-size:11px;margin-top:4px;">' + escapeHtml(mark.note) + "</div>" : "");
   }
-  var removeBtn = editable ? '<button type="button" class="btn-icon" data-action="remove-damage" data-id="' + mark.id + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' : "";
-  return '<div style="background:#12161D;border-radius:10px;padding:8px 10px;">' +
+  var removeBtn = editable ? '<button type="button" class="btn-icon" data-action="remove-damage" data-id="' + mark.id + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' : "";
+  return '<div style="background:#1C1C1E;border-radius:10px;padding:8px 10px;">' +
     '<div class="row-between"><div style="display:flex;align-items:center;gap:8px;">' +
-    '<span style="width:18px;height:18px;border-radius:50%;background:#fff;border:1.4px solid #2A3340;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#0B1013;flex-shrink:0;">' + mark.type + "</span>" +
-    '<div><div style="color:#EDF1F5;font-size:13px;">' + label + '</div><div style="color:#8A96A3;font-size:11px;">' + TYPE_INFO[mark.type].label + "</div></div></div>" + removeBtn + "</div>" +
+    '<span style="width:18px;height:18px;border-radius:50%;background:#fff;border:1.4px solid #38383A;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#FFFFFF;flex-shrink:0;">' + mark.type + "</span>" +
+    '<div><div style="color:#FFFFFF;font-size:13px;">' + label + '</div><div style="color:#8E8E93;font-size:11px;">' + TYPE_INFO[mark.type].label + "</div></div></div>" + removeBtn + "</div>" +
     noteHtml + "</div>";
 }
 
@@ -597,18 +632,18 @@ function renderHome() {
   var listHtml;
   if (filtered.length === 0) {
     listHtml = '<div class="section" style="text-align:center;padding:32px 16px;">' +
-      '<div style="color:#EDF1F5;font-size:14px;margin-bottom:4px;">' + (index.length === 0 ? "لا يوجد فحوصات بعد" : "لا توجد نتائج مطابقة") + "</div>" +
-      '<div style="color:#8A96A3;font-size:12px;">' + (index.length === 0 ? "ابدأ بإنشاء أول فحص لسيارة" : "جرّب كلمات بحث أو تاريخ مختلف") + "</div></div>";
+      '<div style="color:#FFFFFF;font-size:14px;margin-bottom:4px;">' + (index.length === 0 ? "لا يوجد فحوصات بعد" : "لا توجد نتائج مطابقة") + "</div>" +
+      '<div style="color:#8E8E93;font-size:12px;">' + (index.length === 0 ? "ابدأ بإنشاء أول فحص لسيارة" : "جرّب كلمات بحث أو تاريخ مختلف") + "</div></div>";
   } else {
     listHtml = filtered.map(function (it) {
       var sevLabel = it.damageCount === 0 ? "سليمة" : it.damageCount + " ملاحظات";
       return '<div class="section" data-action="open-detail" data-id="' + it.id + '" style="margin-bottom:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
         '<div style="flex:1;min-width:0;">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#EDF1F5;font-size:15px;font-weight:700;">' + escapeHtml(it.carCode || "بدون رمز") + '</span>' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#FFFFFF;font-size:15px;font-weight:700;">' + escapeHtml(it.carCode || "بدون رمز") + '</span>' +
         '<span style="font-size:11px;color:' + it.badgeColor + ";background:" + it.badgeColor + '1F;padding:2px 8px;border-radius:999px;">' + sevLabel + "</span></div>" +
-        '<div style="color:#8A96A3;font-size:12px;">' + escapeHtml(it.driver || "—") + " · " + escapeHtml(it.place || "—") + "</div>" +
-        '<div style="color:#5C6773;font-size:11px;margin-top:2px;">' + formatDT(it.dateTime) + "</div></div>" +
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5C6773" stroke-width="2" style="transform:rotate(180deg);"><path d="M9 6l6 6-6 6"/></svg></div>';
+        '<div style="color:#8E8E93;font-size:12px;">' + escapeHtml(it.driver || "—") + " · " + escapeHtml(it.place || "—") + "</div>" +
+        '<div style="color:#636366;font-size:11px;margin-top:2px;">' + formatDT(it.dateTime) + "</div></div>" +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2" style="transform:rotate(180deg);"><path d="M9 6l6 6-6 6"/></svg></div>';
     }).join("");
   }
 
@@ -616,27 +651,27 @@ function renderHome() {
   if (cloudError) {
     cloudBanner = '<div style="margin:0 18px 10px;background:#2A1518;border:1px solid #5C2530;border-radius:10px;padding:10px 12px;color:#F0899A;font-size:11.5px;">⚠ ' + escapeHtml(cloudError) + "</div>";
   } else if (!cloudReady) {
-    cloudBanner = '<div style="margin:0 18px 10px;background:#12161D;border:1px solid #2A3340;border-radius:10px;padding:10px 12px;color:#8A96A3;font-size:11.5px;display:flex;align-items:center;gap:8px;"><span class="spin">⟳</span> جاري الاتصال بالخدمة السحابية...</div>';
+    cloudBanner = '<div style="margin:0 18px 10px;background:#1C1C1E;border:1px solid #38383A;border-radius:10px;padding:10px 12px;color:#8E8E93;font-size:11.5px;display:flex;align-items:center;gap:8px;"><span class="spin">⟳</span> جاري الاتصال بالخدمة السحابية...</div>';
   }
 
   return '<div style="padding-bottom:90px;">' +
     '<div style="padding:22px 18px 8px;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">' +
-    '<div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#4FD9C6,#2B8F82);display:flex;align-items:center;justify-content:center;">' +
-    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="2.2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></div>' +
-    '<div style="flex:1;"><div style="color:#EDF1F5;font-size:19px;font-weight:800;">فحص السيارات</div><div style="color:#8A96A3;font-size:12px;">سجل الفحوصات الدوري</div></div>' +
-    '<button type="button" class="btn-icon" data-action="go-reports" title="التقارير"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M9 17v-6M12 17v-10M15 17v-3M4 21h16"/></svg></button>' +
-    '<button type="button" class="btn-icon" data-action="go-vehicles" title="المركبات"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></button>' +
-    '<button type="button" class="btn-icon" data-action="go-admin" title="لوحة الإدارة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg></button>' +
+    '<div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#0A84FF,#0060DF);display:flex;align-items:center;justify-content:center;">' +
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></div>' +
+    '<div style="flex:1;"><div style="color:#FFFFFF;font-size:19px;font-weight:800;">فحص السيارات</div><div style="color:#8E8E93;font-size:12px;">سجل الفحوصات الدوري</div></div>' +
+    '<button type="button" class="btn-icon" data-action="go-reports" title="التقارير"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M9 17v-6M12 17v-10M15 17v-3M4 21h16"/></svg></button>' +
+    '<button type="button" class="btn-icon" data-action="go-vehicles" title="المركبات"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></button>' +
+    '<button type="button" class="btn-icon" data-action="go-admin" title="لوحة الإدارة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg></button>' +
     "</div></div>" +
     cloudBanner +
     '<div style="padding:12px 18px;display:flex;gap:8px;">' +
     '<input class="input" id="home-search" value="' + escapeHtml(state.homeQuery) + '" placeholder="ابحث برمز السيارة، المكان، أو الفاحص" style="flex:1;" />' +
     '<input class="input" type="date" data-field="homeDate" value="' + escapeHtml(state.homeDate) + '" title="التقويم — الرجوع لفحص قديم" style="width:150px;flex-shrink:0;" />' +
     "</div>" +
-    (state.homeDate ? '<div style="padding:0 18px 8px;display:flex;justify-content:flex-end;"><button type="button" data-action="clear-home-date" style="background:none;border:none;color:#5C6773;font-size:11.5px;text-decoration:underline;">مسح فلتر التاريخ (' + formatDateOnly(state.homeDate) + ")</button></div>" : "") +
+    (state.homeDate ? '<div style="padding:0 18px 8px;display:flex;justify-content:flex-end;"><button type="button" data-action="clear-home-date" style="background:none;border:none;color:#636366;font-size:11.5px;text-decoration:underline;">مسح فلتر التاريخ (' + formatDateOnly(state.homeDate) + ")</button></div>" : "") +
     '<div style="padding:4px 18px;">' + listHtml + "</div>" +
     '<button type="button" data-action="go-new" class="btn-primary" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:min(90%,420px);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 30px -8px rgba(79,217,198,0.5);">' +
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> فحص جديد</button>' +
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> فحص جديد</button>' +
     "</div>";
 }
 
@@ -645,21 +680,32 @@ function renderHome() {
 ================================================================= */
 function renderVehicles() {
   var vehicles = getVehicles();
+  var isAdmin = state.adminUnlocked;
+  var addSectionHtml = isAdmin
+    ? '<div class="section"><div class="section-title">إضافة مركبة جديدة</div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<input class="input" data-field="newVehicleCode" inputmode="numeric" pattern="[0-9]*" placeholder="رمز المركبة" value="' + escapeHtml(state.newVehicleCode) + '" style="flex:1;" />' +
+      '<button type="button" class="btn-primary" data-action="add-vehicle" style="white-space:nowrap;padding:10px 16px;">إضافة</button></div>' +
+      (state.vehicleError ? '<div style="color:#FF453A;font-size:11.5px;margin-top:8px;">' + escapeHtml(state.vehicleError) + "</div>" : "") +
+      "</div>"
+    : '<div class="section"><div style="color:#8E8E93;font-size:12px;display:flex;align-items:center;gap:8px;">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2" style="flex-shrink:0;"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg>' +
+      'إضافة أو حذف المركبات متاح فقط لحساب الإدارة (لوحة الإدارة).</div></div>';
   return '<div style="padding-bottom:40px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
-    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">المركبات</div></div>' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">المركبات</div></div>' +
     '<div style="padding:0 18px;">' +
-    '<div class="section"><div class="section-title">إضافة مركبة جديدة</div>' +
-    '<div style="display:flex;gap:8px;">' +
-    '<input class="input" data-field="newVehicleCode" inputmode="numeric" pattern="[0-9]*" placeholder="رمز المركبة" value="' + escapeHtml(state.newVehicleCode) + '" style="flex:1;" />' +
-    '<button type="button" class="btn-primary" data-action="add-vehicle" style="white-space:nowrap;padding:10px 16px;">إضافة</button></div>' +
-    (state.vehicleError ? '<div style="color:#F0526B;font-size:11.5px;margin-top:8px;">' + escapeHtml(state.vehicleError) + "</div>" : "") +
-    "</div>" +
+    addSectionHtml +
     '<div class="section"><div class="section-title">قائمة المركبات (' + vehicles.length + ")</div>" +
     '<div style="display:flex;flex-direction:column;gap:6px;">' +
     vehicles.map(function (v) {
-      return '<div style="background:#12161D;border-radius:9px;padding:9px 12px;color:#EDF1F5;font-size:14px;font-weight:600;">' + escapeHtml(v) + "</div>";
+      return '<div style="display:flex;align-items:center;justify-content:space-between;background:#1C1C1E;border-radius:9px;padding:9px 12px;">' +
+        '<span style="color:#FFFFFF;font-size:14px;font-weight:600;">' + escapeHtml(v) + "</span>" +
+        (isAdmin
+          ? '<button type="button" class="btn-icon" data-action="delete-vehicle" data-code="' + escapeHtml(v) + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg></button>'
+          : "") +
+        "</div>";
     }).join("") +
     "</div></div></div></div>";
 }
@@ -682,19 +728,19 @@ function renderReports() {
 
   function row(it) {
     var sevLabel = it.damageCount === 0 ? "سليمة" : it.damageCount + " ملاحظات";
-    return '<div style="background:#12161D;border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+    return '<div style="background:#1C1C1E;border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
       '<div style="flex:1;min-width:0;cursor:pointer;" data-action="open-detail" data-id="' + it.id + '">' +
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><span style="color:#EDF1F5;font-size:13.5px;font-weight:700;">' + escapeHtml(it.carCode || "—") + '</span>' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><span style="color:#FFFFFF;font-size:13.5px;font-weight:700;">' + escapeHtml(it.carCode || "—") + '</span>' +
       '<span style="font-size:10.5px;color:' + it.badgeColor + ";background:" + it.badgeColor + '1F;padding:1px 7px;border-radius:999px;">' + sevLabel + "</span></div>" +
-      '<div style="color:#8A96A3;font-size:11.5px;">' + escapeHtml(it.driver || "—") + " · " + formatDT(it.dateTime) + "</div></div>" +
-      '<button type="button" data-action="open-print" data-id="' + it.id + '" title="طباعة" style="background:#212934;border:none;border-radius:9px;padding:8px 10px;flex-shrink:0;">' +
-      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg></button></div>';
+      '<div style="color:#8E8E93;font-size:11.5px;">' + escapeHtml(it.driver || "—") + " · " + formatDT(it.dateTime) + "</div></div>" +
+      '<button type="button" data-action="open-print" data-id="' + it.id + '" title="طباعة" style="background:#2C2C2E;border:none;border-radius:9px;padding:8px 10px;flex-shrink:0;">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg></button></div>';
   }
 
   return '<div style="padding-bottom:40px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
-    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">التقارير</div></div>' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">التقارير</div></div>' +
     '<div style="padding:0 18px;">' +
 
     '<div class="section"><div class="section-title">طباعة حسب رقم السيارة</div>' +
@@ -702,7 +748,7 @@ function renderReports() {
     (q
       ? (carMatches.length
           ? '<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">' + carMatches.map(row).join("") + "</div>"
-          : '<div style="color:#8A96A3;font-size:12px;margin-top:10px;">لا توجد فحوصات لهذا الرقم</div>')
+          : '<div style="color:#8E8E93;font-size:12px;margin-top:10px;">لا توجد فحوصات لهذا الرقم</div>')
       : "") +
     "</div>" +
 
@@ -710,14 +756,14 @@ function renderReports() {
     '<div style="display:flex;flex-direction:column;">' +
     driverList.map(function (d) {
       var active = state.reportsDriverFilter === d;
-      return '<div data-action="filter-by-driver" data-driver="' + escapeHtml(d) + '" style="display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid #2A3340;cursor:pointer;border-radius:8px;' + (active ? "background:#212934;" : "") + '">' +
-        '<span style="color:#EDF1F5;font-size:13.5px;">' + escapeHtml(d) + '</span>' +
-        '<span style="color:#8A96A3;font-size:12px;">' + (driverCounts[d] || 0) + " فحص</span></div>";
+      return '<div data-action="filter-by-driver" data-driver="' + escapeHtml(d) + '" style="display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid #38383A;cursor:pointer;border-radius:8px;' + (active ? "background:#2C2C2E;" : "") + '">' +
+        '<span style="color:#FFFFFF;font-size:13.5px;">' + escapeHtml(d) + '</span>' +
+        '<span style="color:#8E8E93;font-size:12px;">' + (driverCounts[d] || 0) + " فحص</span></div>";
     }).join("") +
     "</div>" +
     (filterDriver
       ? ('<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">' +
-          (driverMatches.length ? driverMatches.map(row).join("") : '<div style="color:#8A96A3;font-size:12px;">لا توجد فحوصات لهذا الفاحص</div>') +
+          (driverMatches.length ? driverMatches.map(row).join("") : '<div style="color:#8E8E93;font-size:12px;">لا توجد فحوصات لهذا الفاحص</div>') +
           "</div>")
       : "") +
     "</div>" +
@@ -727,17 +773,17 @@ function renderReports() {
 
 function renderPastInspections() {
   if (draft.pastLoading) {
-    return '<div style="display:flex;align-items:center;gap:8px;color:#8A96A3;font-size:12px;padding:0 4px 14px;"><span class="spin">⟳</span> جاري البحث...</div>';
+    return '<div style="display:flex;align-items:center;gap:8px;color:#8E8E93;font-size:12px;padding:0 4px 14px;"><span class="spin">⟳</span> جاري البحث...</div>';
   }
   if (!draft.pastInspections) return "";
   if (draft.pastInspections.length === 0) {
-    return '<div class="section"><div class="section-title">آخر فحوصات لهذه السيارة</div><div style="color:#8A96A3;font-size:12px;">لا يوجد فحوصات سابقة بهذا الرمز</div></div>';
+    return '<div class="section"><div class="section-title">آخر فحوصات لهذه السيارة</div><div style="color:#8E8E93;font-size:12px;">لا يوجد فحوصات سابقة بهذا الرمز</div></div>';
   }
   var cards = draft.pastInspections.map(function (rec) {
     var color = badgeColorFor(rec.damages || []);
-    return '<div style="background:#12161D;border:1px solid #2A3340;border-radius:12px;padding:10px 12px;margin-bottom:8px;">' +
+    return '<div style="background:#1C1C1E;border:1px solid #38383A;border-radius:12px;padding:10px 12px;margin-bottom:8px;">' +
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="width:9px;height:9px;border-radius:3px;background:' + color + ';display:inline-block;"></span>' +
-      '<div><div style="color:#EDF1F5;font-size:13px;">' + formatDT(rec.dateTime) + '</div><div style="color:#8A96A3;font-size:11px;">' + escapeHtml(rec.driver || "—") + " · " + ((rec.damages || []).length === 0 ? "سليمة" : (rec.damages || []).length + " ملاحظات") + "</div></div></div>" +
+      '<div><div style="color:#FFFFFF;font-size:13px;">' + formatDT(rec.dateTime) + '</div><div style="color:#8E8E93;font-size:11px;">' + escapeHtml(rec.driver || "—") + " · " + ((rec.damages || []).length === 0 ? "سليمة" : (rec.damages || []).length + " ملاحظات") + "</div></div></div>" +
       '<button type="button" class="btn-secondary" data-action="print-past" data-id="' + rec.id + '" style="width:100%;padding:9px 12px;">عرض / طباعة هذا الفحص</button></div>';
   }).join("");
   return '<div class="section"><div class="section-title">آخر فحوصات لهذه السيارة (كمرجع)</div>' + cards + "</div>";
@@ -745,17 +791,31 @@ function renderPastInspections() {
 
 function renderDriverIdentityBlock() {
   if (draft.pinVerified && draft.driver) {
-    return '<div style="display:flex;align-items:center;justify-content:space-between;background:#12161D;border:1px solid #2A3340;border-radius:10px;padding:10px 12px;">' +
-      '<div style="display:flex;align-items:center;gap:6px;color:#4FD9C6;font-size:12px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4FD9C6" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> ' + escapeHtml(draft.driver) + " — " + formatDT(draft.driverConfirmedAt) + "</div>" +
-      '<button type="button" data-action="reset-pin-check" style="background:none;border:none;color:#5C6773;font-size:11px;text-decoration:underline;">تغيير</button></div>';
+    var changePinHtml = "";
+    if (draft.changePinOpen) {
+      changePinHtml = '<div style="margin-top:10px;">' +
+        '<label class="label">رمز جديد (4 أرقام) — يجب ألا يشابه رمز فاحص آخر</label>' +
+        '<div style="display:flex;gap:8px;">' +
+        '<input class="input" data-field="newPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="رمز جديد" value="' + escapeHtml(draft.newPin || "") + '" style="flex:1;" />' +
+        '<button type="button" class="btn-primary" data-action="save-own-pin" style="white-space:nowrap;padding:10px 14px;">حفظ</button></div>' +
+        (draft.changePinMsg ? '<div style="color:' + (draft.changePinMsgOk ? "#30D158" : "#FF453A") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(draft.changePinMsg) + "</div>" : "") +
+        "</div>";
+    }
+    return '<div style="background:#1C1C1E;border:1px solid #38383A;border-radius:10px;padding:10px 12px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+      '<div style="display:flex;align-items:center;gap:6px;color:#0A84FF;font-size:12px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> ' + escapeHtml(draft.driver) + " — " + formatDT(draft.driverConfirmedAt) + "</div>" +
+      '<div style="display:flex;gap:10px;flex-shrink:0;">' +
+      '<button type="button" data-action="toggle-change-pin" style="background:none;border:none;color:#636366;font-size:11px;text-decoration:underline;">' + (draft.changePinOpen ? "إلغاء" : "تغيير رمزي") + '</button>' +
+      '<button type="button" data-action="reset-pin-check" style="background:none;border:none;color:#636366;font-size:11px;text-decoration:underline;">تسجيل خروج</button></div></div>' +
+      changePinHtml + "</div>";
   }
   return '<div>' +
     '<label class="label">رمز الفاحص</label>' +
     '<input class="input" data-field="pinTry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="أدخل رمزك المكوّن من 4 أرقام" value="' + escapeHtml(draft.pinTry) + '" />' +
-    (draft.pinError ? '<div style="color:#F0526B;font-size:11.5px;margin-top:6px;">' + draft.pinError + "</div>" : "") +
+    (draft.pinError ? '<div style="color:#FF453A;font-size:11.5px;margin-top:6px;">' + draft.pinError + "</div>" : "") +
     '<div data-action="toggle-remember-pin" style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;">' +
-    '<span class="chk-box' + (draft.rememberPin ? " on" : "") + '">' + (draft.rememberPin ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
-    '<span style="font-size:12px;color:#8A96A3;">تذكرني على هذا الجهاز</span></div>' +
+    '<span class="chk-box' + (draft.rememberPin ? " on" : "") + '">' + (draft.rememberPin ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
+    '<span style="font-size:12px;color:#8E8E93;">تذكرني على هذا الجهاز</span></div>' +
     "</div>";
 }
 
@@ -774,10 +834,10 @@ function renderInspectionFields(d) {
     "</div>" +
 
     '<div class="section"><div class="row-between" style="margin-bottom:12px;"><div class="section-title" style="margin-bottom:0;">فحص الهيكل</div>' +
-    '<button type="button" data-action="undo-damage" ' + (d.damages.length === 0 ? "disabled" : "") + ' style="background:#212934;border:none;border-radius:9px;display:flex;align-items:center;gap:5px;padding:6px 10px;opacity:' + (d.damages.length === 0 ? "0.45" : "1") + ';">' +
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2.2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v0a5.5 5.5 0 01-5.5 5.5H11"/></svg>' +
-    '<span style="color:#EDF1F5;font-size:11.5px;font-weight:600;">تراجع عن آخر علامة</span></button></div>' +
-    '<div style="color:#8A96A3;font-size:12px;margin-bottom:10px;">اختر نوع الضرر ثم اضغط مباشرة على الجزء المتضرر من السيارة</div>' +
+    '<button type="button" data-action="undo-damage" ' + (d.damages.length === 0 ? "disabled" : "") + ' style="background:#2C2C2E;border:none;border-radius:9px;display:flex;align-items:center;gap:5px;padding:6px 10px;opacity:' + (d.damages.length === 0 ? "0.45" : "1") + ';">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v0a5.5 5.5 0 01-5.5 5.5H11"/></svg>' +
+    '<span style="color:#FFFFFF;font-size:11.5px;font-weight:600;">تراجع عن آخر علامة</span></button></div>' +
+    '<div style="color:#8E8E93;font-size:12px;margin-bottom:10px;">اختر نوع الضرر ثم اضغط مباشرة على الجزء المتضرر من السيارة</div>' +
     renderTypePicker(d.selectedType) +
     renderCarDiagram(d.damages, { editable: true, theme: "dark", id: "new-diagram" }) +
     damagesListHtml +
@@ -791,8 +851,8 @@ function renderInspectionFields(d) {
     CHECKLIST_ITEMS.map(function (item) {
       var on = d.checklist[item.key];
       return '<div style="display:flex;align-items:center;gap:8px;cursor:pointer;" data-action="toggle-checklist" data-key="' + item.key + '">' +
-        '<span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
-        '<span style="font-size:13px;color:#EDF1F5;">' + item.label + "</span></div>";
+        '<span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
+        '<span style="font-size:13px;color:#FFFFFF;">' + item.label + "</span></div>";
     }).join("") + "</div>" +
     '<div style="margin-top:10px;"><label class="label">أخرى</label><input class="input" data-field="otherText" list="dl-otherText" placeholder="بند إضافي" value="' + escapeHtml(d.otherText) + '" />' + datalistHtml("dl-otherText", "otherText") + "</div>" +
     "</div>" +
@@ -803,7 +863,7 @@ function renderInspectionFields(d) {
     '<div><label class="label">ملاحظات المرسل</label><textarea class="input" data-field="dispatchComments" list="dl-dispatchComments" rows="3" style="resize:none;">' + escapeHtml(d.dispatchComments) + "</textarea>" + datalistHtml("dl-dispatchComments", "dispatchComments") + "</div>" +
     "</div>" +
 
-    (d.errorMsg ? '<div style="color:#F0526B;font-size:13px;text-align:center;margin-bottom:10px;">' + escapeHtml(d.errorMsg) + "</div>" : "");
+    (d.errorMsg ? '<div style="color:#FF453A;font-size:13px;text-align:center;margin-bottom:10px;">' + escapeHtml(d.errorMsg) + "</div>" : "");
 }
 
 function renderNew() {
@@ -816,17 +876,17 @@ function renderNew() {
     : '<div style="position:relative;">' +
         '<div style="filter:blur(6px);pointer-events:none;user-select:none;">' + restHtml + "</div>" +
         '<div style="position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;padding-top:60px;">' +
-        '<div style="background:#12161D;border:1px solid #2A3340;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px -8px rgba(0,0,0,0.6);">' +
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg>' +
-        '<span style="color:#8A96A3;font-size:12.5px;">أدخل رمز الفاحص الصحيح لفتح باقي الفحص</span></div></div></div>';
+        '<div style="background:#1C1C1E;border:1px solid #38383A;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px -8px rgba(0,0,0,0.6);">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg>' +
+        '<span style="color:#8E8E93;font-size:12.5px;">أدخل رمز الفاحص الصحيح لفتح باقي الفحص</span></div></div></div>';
 
   return '<div style="padding-bottom:110px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
-    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">فحص جديد</div>' +
-    '<button type="button" data-action="open-draft-print" ' + (unlocked ? "" : "disabled") + ' style="background:#212934;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;opacity:' + (unlocked ? "1" : "0.45") + ';">' +
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>' +
-    '<span style="color:#EDF1F5;font-size:12px;font-weight:600;">طباعة</span></button></div>' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">فحص جديد</div>' +
+    '<button type="button" data-action="open-draft-print" ' + (unlocked ? "" : "disabled") + ' style="background:#2C2C2E;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;opacity:' + (unlocked ? "1" : "0.45") + ';">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>' +
+    '<span style="color:#FFFFFF;font-size:12px;font-weight:600;">طباعة</span></button></div>' +
 
     '<div style="padding:0 18px;">' +
     '<div class="section"><div class="section-title">بيانات الفحص</div>' +
@@ -842,7 +902,7 @@ function renderNew() {
     lockedWrap +
     "</div>" +
 
-    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #10141B 60%, transparent);max-width:480px;margin:0 auto;">' +
+    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #000000 60%, transparent);max-width:480px;margin:0 auto;">' +
     '<button type="button" class="btn-primary" data-action="save-inspection" style="width:100%;opacity:' + (!unlocked ? "0.45" : d.saving ? "0.7" : "1") + ';" ' + (!unlocked || d.saving ? "disabled" : "") + ">" + (d.saving ? "جاري الحفظ..." : "حفظ الفحص") + "</button></div>" +
     "</div>";
 }
@@ -851,48 +911,72 @@ function renderDetail() {
   var record = inspectionsCache[state.selectedId] || null;
   if (!record) {
     return '<div style="padding:0 18px;"><div style="display:flex;align-items:center;gap:10px;padding:20px 0 12px;">' +
-      '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-      '<div style="color:#EDF1F5;font-size:17px;font-weight:800;">تفاصيل الفحص</div></div>' +
-      '<div class="section" style="text-align:center;"><div style="color:#EDF1F5;font-size:14px;">تعذّر العثور على هذا الفحص</div></div></div>';
+      '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+      '<div style="color:#FFFFFF;font-size:17px;font-weight:800;">تفاصيل الفحص</div></div>' +
+      '<div class="section" style="text-align:center;"><div style="color:#FFFFFF;font-size:14px;">تعذّر العثور على هذا الفحص</div></div></div>';
   }
   var damages = record.damages || [];
   var damagesHtml = damages.length === 0
-    ? '<div style="color:#8A96A3;font-size:13px;margin-top:10px;">لا توجد ملاحظات مسجّلة — السيارة سليمة</div>'
+    ? '<div style="color:#8E8E93;font-size:13px;margin-top:10px;">لا توجد ملاحظات مسجّلة — السيارة سليمة</div>'
     : '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">' + damages.map(function (m) { return renderDamageListRow(m, false); }).join("") + "</div>";
 
   function row(label, value) {
-    return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #212934;"><span style="color:#8A96A3;font-size:12px;">' + label + '</span><span style="color:#EDF1F5;font-size:13px;">' + escapeHtml(value || "—") + "</span></div>";
+    return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #2C2C2E;"><span style="color:#8E8E93;font-size:12px;">' + label + '</span><span style="color:#FFFFFF;font-size:13px;">' + escapeHtml(value || "—") + "</span></div>";
   }
 
   var checklistHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + CHECKLIST_ITEMS.map(function (item) {
     var on = (record.checklist || {})[item.key];
-    return '<div style="display:flex;align-items:center;gap:8px;"><span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + '</span><span style="font-size:13px;color:#EDF1F5;">' + item.label + "</span></div>";
+    return '<div style="display:flex;align-items:center;gap:8px;"><span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + '</span><span style="font-size:13px;color:#FFFFFF;">' + item.label + "</span></div>";
   }).join("") + "</div>";
 
   var placeLine = record.place + (record.placeNote ? " — " + escapeHtml(record.placeNote) : "");
 
   return '<div style="padding-bottom:40px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
-    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">تفاصيل الفحص</div>' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">تفاصيل الفحص</div>' +
     (state.adminUnlocked
-      ? '<button type="button" data-action="admin-edit-report" data-id="' + record.id + '" style="background:#212934;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;">' +
-        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4FD9C6" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>' +
-        '<span style="color:#4FD9C6;font-size:12px;font-weight:600;">تعديل</span></button>'
+      ? '<button type="button" data-action="admin-edit-report" data-id="' + record.id + '" style="background:#2C2C2E;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>' +
+        '<span style="color:#0A84FF;font-size:12px;font-weight:600;">تعديل</span></button>'
       : "") +
-    '<button type="button" data-action="open-print" data-id="' + record.id + '" style="background:#212934;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;">' +
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>' +
-    '<span style="color:#EDF1F5;font-size:12px;font-weight:600;">طباعة</span></button></div>' +
+    '<button type="button" data-action="open-print" data-id="' + record.id + '" style="background:#2C2C2E;border:none;border-radius:10px;display:flex;align-items:center;gap:6px;padding:8px 12px;">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>' +
+    '<span style="color:#FFFFFF;font-size:12px;font-weight:600;">طباعة</span></button></div>' +
 
     '<div style="padding:0 18px;">' +
     '<div class="section"><div class="section-title">بيانات الفحص</div>' + row("رمز السيارة", record.carCode) + row("الفاحص", record.driver) + row("المكان", placeLine) + row("التاريخ والوقت", formatDT(record.dateTime)) + "</div>" +
     '<div class="section"><div class="section-title">حالة الهيكل</div>' + renderLegend() + renderCarDiagram(damages, { editable: false, theme: "dark" }) + damagesHtml + "</div>" +
-    '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div><div style="color:' + (record.mechanicNotes ? "#EDF1F5" : "#8A96A3") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div></div>" +
-    '<div class="section"><div class="section-title">التجهيزات</div>' + checklistHtml + (record.otherText ? '<div style="margin-top:8px;font-size:13px;color:#8A96A3;">أخرى: ' + escapeHtml(record.otherText) + "</div>" : "") + "</div>" +
+    '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div><div style="color:' + (record.mechanicNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div></div>" +
+    '<div class="section"><div class="section-title">التجهيزات</div>' + checklistHtml + (record.otherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.otherText) + "</div>" : "") + "</div>" +
     '<div class="section"><div class="section-title">هوية الفاحص</div>' + row("الفاحص", record.driver) +
-    '<div style="display:flex;align-items:center;gap:6px;color:#4FD9C6;font-size:13px;margin-top:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4FD9C6" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> تم تأكيد الهوية عبر الرمز الشخصي بتاريخ ' + formatDT(record.driverConfirmedAt) + "</div></div>" +
+    '<div style="display:flex;align-items:center;gap:6px;color:#0A84FF;font-size:13px;margin-top:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> تم تأكيد الهوية عبر الرمز الشخصي بتاريخ ' + formatDT(record.driverConfirmedAt) + "</div></div>" +
     '<div class="section"><div class="section-title">معلومات إضافية</div>' + row("آخر سائق", record.lastDriver) + row("تاريخ ووقت آخر سائق", formatDT(record.lastDriverDateTime)) + row("ملاحظات المرسل", record.dispatchComments) + "</div>" +
+    renderDeleteReportSection(record) +
     "</div></div>";
+}
+
+function renderDeleteReportSection(record) {
+  if (state.adminUnlocked) {
+    return '<div class="section"><div class="section-title">منطقة الخطر</div>' +
+      '<button type="button" class="btn-danger" data-action="admin-delete-report" data-id="' + record.id + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>' +
+      'حذف هذا الفحص</button></div>';
+  }
+  var openHtml = "";
+  if (state.detailDeleteOpen) {
+    openHtml = '<div style="margin-top:10px;">' +
+      '<label class="label">أدخل رمزك السري لتأكيد حذف هذا الفحص (يجب أن تكون أنت الفاحص صاحب هذا الفحص)</label>' +
+      '<input class="input" data-field="detailDeletePinTry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="رمزك المكوّن من 4 أرقام" value="' + escapeHtml(state.detailDeletePinTry) + '" />' +
+      (state.detailDeleteError ? '<div style="color:#FF453A;font-size:11.5px;margin-top:6px;">' + escapeHtml(state.detailDeleteError) + "</div>" : "") +
+      '<button type="button" data-action="toggle-own-delete" style="background:none;border:none;color:#636366;font-size:11.5px;text-decoration:underline;margin-top:8px;">إلغاء</button>' +
+      "</div>";
+  }
+  return '<div class="section"><div class="section-title">منطقة الخطر</div>' +
+    (state.detailDeleteOpen ? "" : '<button type="button" class="btn-danger" data-action="toggle-own-delete" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>' +
+      'حذف الفحص (كفاحص صاحب الفحص)</button>') +
+    openHtml + "</div>";
 }
 
 /* =================================================================
@@ -901,54 +985,70 @@ function renderDetail() {
 ================================================================= */
 function renderAdminGate() {
   return '<div style="padding-bottom:40px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
-    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">لوحة الإدارة</div></div>' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">لوحة الإدارة</div></div>' +
     '<div style="padding:0 18px;">' +
     '<div class="section"><div class="section-title">رمز الأدمن</div>' +
     '<input class="input" data-field="adminPinTry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="أدخل رمز الأدمن المكوّن من 4 أرقام" value="' + escapeHtml(state.adminPinTry) + '" />' +
-    (state.adminPinError ? '<div style="color:#F0526B;font-size:11.5px;margin-top:6px;">' + state.adminPinError + "</div>" : "") +
+    (state.adminPinError ? '<div style="color:#FF453A;font-size:11.5px;margin-top:6px;">' + state.adminPinError + "</div>" : "") +
     "</div></div></div>";
 }
 
 function renderAdminMenu() {
   return '<div style="padding-bottom:40px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
-    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">لوحة الإدارة</div>' +
-    '<button type="button" data-action="admin-logout" style="background:#212934;border:none;border-radius:9px;padding:8px 12px;color:#8A96A3;font-size:12px;">خروج</button></div>' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">لوحة الإدارة</div>' +
+    '<button type="button" data-action="admin-logout" style="background:#2C2C2E;border:none;border-radius:9px;padding:8px 12px;color:#8E8E93;font-size:12px;">خروج</button></div>' +
     '<div style="padding:0 18px;">' +
-    '<div style="color:#8A96A3;font-size:12px;margin-bottom:12px;">مسجّل دخول كـ ' + escapeHtml(state.adminName) + '</div>' +
+    '<div style="color:#8E8E93;font-size:12px;margin-bottom:12px;">مسجّل دخول كـ ' + escapeHtml(state.adminName) + '</div>' +
+    renderAdminSelfPinSection() +
     '<div class="section" data-action="go-admin-pins" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
-    '<div><div style="color:#EDF1F5;font-size:14px;font-weight:700;">تغيير رموز الفاحصين</div><div style="color:#8A96A3;font-size:12px;margin-top:2px;">تعديل الرمز السري لأي فاحص من القائمة</div></div>' +
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5C6773" stroke-width="2" style="transform:rotate(180deg);flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg></div>' +
+    '<div><div style="color:#FFFFFF;font-size:14px;font-weight:700;">تغيير رموز الفاحصين</div><div style="color:#8E8E93;font-size:12px;margin-top:2px;">تعديل الرمز السري لأي فاحص من القائمة</div></div>' +
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2" style="transform:rotate(180deg);flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg></div>' +
     '<div class="section" data-action="go-admin-admins" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
-    '<div><div style="color:#EDF1F5;font-size:14px;font-weight:700;">الأدمنز</div><div style="color:#8A96A3;font-size:12px;margin-top:2px;">إضافة أدمن جديد أو تغيير رمز أدمن حالي</div></div>' +
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5C6773" stroke-width="2" style="transform:rotate(180deg);flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg></div>' +
-    '<div style="color:#5C6773;font-size:11.5px;margin-top:4px;">لتعديل تقرير محفوظ: افتحه من الصفحة الرئيسية، وسيظهر زر "تعديل" أعلى الصفحة طالما إنت مسجّل دخول هون.</div>' +
+    '<div><div style="color:#FFFFFF;font-size:14px;font-weight:700;">الأدمنز</div><div style="color:#8E8E93;font-size:12px;margin-top:2px;">إضافة أدمن جديد أو تغيير رمز أدمن حالي</div></div>' +
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2" style="transform:rotate(180deg);flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg></div>' +
+    '<div style="color:#636366;font-size:11.5px;margin-top:4px;">لتعديل تقرير محفوظ: افتحه من الصفحة الرئيسية، وسيظهر زر "تعديل" أعلى الصفحة طالما إنت مسجّل دخول هون.</div>' +
     "</div></div>";
+}
+
+function renderAdminSelfPinSection() {
+  var openHtml = "";
+  if (state.adminSelfPinOpen) {
+    openHtml = '<div style="margin-top:10px;display:flex;gap:8px;">' +
+      '<input class="input" data-field="adminSelfNewPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="رمز جديد (4 أرقام)" value="' + escapeHtml(state.adminSelfNewPin || "") + '" style="flex:1;" />' +
+      '<button type="button" class="btn-primary" data-action="save-admin-self-pin" style="white-space:nowrap;padding:10px 14px;">حفظ</button></div>' +
+      (state.adminSelfPinMsg ? '<div style="color:' + (state.adminSelfPinMsgOk ? "#30D158" : "#FF453A") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(state.adminSelfPinMsg) + "</div>" : "");
+  }
+  return '<div class="section">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" data-action="toggle-admin-self-pin">' +
+    '<div><div style="color:#FFFFFF;font-size:14px;font-weight:700;">تغيير رمزي الشخصي</div><div style="color:#8E8E93;font-size:12px;margin-top:2px;">يجب ألا يشابه رمز أدمن آخر</div></div>' +
+    '<span style="color:#0A84FF;font-size:12px;">' + (state.adminSelfPinOpen ? "إلغاء" : "تغيير") + "</span></div>" +
+    openHtml + "</div>";
 }
 
 function renderAdminDrivers() {
   var editing = state.adminEditDriverName;
   var rows = DRIVERS.map(function (name) {
     var active = editing === name;
-    return '<div style="background:#12161D;border-radius:10px;padding:10px 12px;margin-bottom:8px;">' +
+    return '<div style="background:#1C1C1E;border-radius:10px;padding:10px 12px;margin-bottom:8px;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" data-action="admin-select-driver" data-driver="' + escapeHtml(name) + '">' +
-      '<span style="color:#EDF1F5;font-size:13.5px;">' + escapeHtml(name) + '</span>' +
-      '<span style="color:#4FD9C6;font-size:12px;">' + (active ? "إلغاء" : "تغيير الرمز") + "</span></div>" +
+      '<span style="color:#FFFFFF;font-size:13.5px;">' + escapeHtml(name) + '</span>' +
+      '<span style="color:#0A84FF;font-size:12px;">' + (active ? "إلغاء" : "تغيير الرمز") + "</span></div>" +
       (active
         ? '<div style="margin-top:10px;display:flex;gap:8px;">' +
           '<input class="input" data-field="adminNewPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="رمز جديد (4 أرقام)" value="' + escapeHtml(state.adminNewPin || "") + '" style="flex:1;" />' +
           '<button type="button" class="btn-primary" data-action="admin-save-driver-pin" data-driver="' + escapeHtml(name) + '" style="white-space:nowrap;padding:10px 14px;">حفظ</button></div>' +
-          (state.adminPinMsg ? '<div style="color:' + (state.adminPinMsgOk ? "#4FD9C6" : "#F0526B") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(state.adminPinMsg) + "</div>" : "")
+          (state.adminPinMsg ? '<div style="color:' + (state.adminPinMsgOk ? "#0A84FF" : "#FF453A") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(state.adminPinMsg) + "</div>" : "")
         : "") +
       "</div>";
   }).join("");
   return '<div style="padding-bottom:40px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
-    '<button type="button" class="btn-icon" data-action="go-admin-menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">تغيير رموز الفاحصين</div></div>' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-admin-menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">تغيير رموز الفاحصين</div></div>' +
     '<div style="padding:0 18px;">' + rows + "</div></div>";
 }
 
@@ -957,22 +1057,22 @@ function renderAdminAdmins() {
   var names = Object.keys(adminsCache).sort();
   var rows = names.map(function (name) {
     var active = editing === name;
-    return '<div style="background:#12161D;border-radius:10px;padding:10px 12px;margin-bottom:8px;">' +
+    return '<div style="background:#1C1C1E;border-radius:10px;padding:10px 12px;margin-bottom:8px;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" data-action="admin-select-admin" data-admin="' + escapeHtml(name) + '">' +
-      '<span style="color:#EDF1F5;font-size:13.5px;">' + escapeHtml(name) + '</span>' +
-      '<span style="color:#4FD9C6;font-size:12px;">' + (active ? "إلغاء" : "تغيير الرمز") + "</span></div>" +
+      '<span style="color:#FFFFFF;font-size:13.5px;">' + escapeHtml(name) + '</span>' +
+      '<span style="color:#0A84FF;font-size:12px;">' + (active ? "إلغاء" : "تغيير الرمز") + "</span></div>" +
       (active
         ? '<div style="margin-top:10px;display:flex;gap:8px;">' +
           '<input class="input" data-field="adminNewPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="رمز جديد (4 أرقام)" value="' + escapeHtml(state.adminNewPin || "") + '" style="flex:1;" />' +
           '<button type="button" class="btn-primary" data-action="admin-save-admin-pin" data-admin="' + escapeHtml(name) + '" style="white-space:nowrap;padding:10px 14px;">حفظ</button></div>' +
-          (state.adminPinMsg ? '<div style="color:' + (state.adminPinMsgOk ? "#4FD9C6" : "#F0526B") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(state.adminPinMsg) + "</div>" : "")
+          (state.adminPinMsg ? '<div style="color:' + (state.adminPinMsgOk ? "#0A84FF" : "#FF453A") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(state.adminPinMsg) + "</div>" : "")
         : "") +
       "</div>";
   }).join("");
   return '<div style="padding-bottom:40px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
-    '<button type="button" class="btn-icon" data-action="go-admin-menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">الأدمنز</div></div>' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-admin-menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">الأدمنز</div></div>' +
     '<div style="padding:0 18px;">' +
     '<div class="section-title" style="padding:0 4px;">الأدمنز الحاليين (' + names.length + ")</div>" +
     rows +
@@ -981,7 +1081,7 @@ function renderAdminAdmins() {
     '<input class="input" data-field="adminNewAdminName" value="' + escapeHtml(state.adminNewAdminName || "") + '" placeholder="اسم الأدمن الجديد" /></div>' +
     '<div><label class="label">الرمز (4 أرقام)</label>' +
     '<input class="input" data-field="adminNewAdminPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="' + escapeHtml(state.adminNewAdminPin || "") + '" placeholder="مثال: 1234" /></div>' +
-    (state.adminAddMsg ? '<div style="color:' + (state.adminAddMsgOk ? "#4FD9C6" : "#F0526B") + ';font-size:11.5px;margin-top:8px;">' + escapeHtml(state.adminAddMsg) + "</div>" : "") +
+    (state.adminAddMsg ? '<div style="color:' + (state.adminAddMsgOk ? "#0A84FF" : "#FF453A") + ';font-size:11.5px;margin-top:8px;">' + escapeHtml(state.adminAddMsg) + "</div>" : "") +
     '<button type="button" class="btn-primary" data-action="admin-add-admin" style="width:100%;margin-top:10px;">إضافة</button>' +
     "</div></div></div>";
 }
@@ -992,18 +1092,18 @@ function renderAdminEditReport() {
     return '<div style="padding:20px 18px;"><div class="section" style="text-align:center;">تعذّر تحميل الفحص</div></div>';
   }
   return '<div style="padding-bottom:110px;">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
-    '<button type="button" class="btn-icon" data-action="admin-cancel-edit"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EDF1F5" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#EDF1F5;font-size:17px;font-weight:800;flex:1;">تعديل الفحص (إدارة)</div></div>' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="admin-cancel-edit"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">تعديل الفحص (إدارة)</div></div>' +
     '<div style="padding:0 18px;">' +
     '<div class="section"><div class="section-title">بيانات الفحص</div>' +
     '<div style="margin-bottom:10px;"><label class="label">رمز السيارة</label>' +
     '<input class="input" data-field="carCode" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(d.carCode) + '" /></div>' +
-    '<div style="background:#12161D;border-radius:10px;padding:10px 12px;color:#8A96A3;font-size:12px;">الفاحص الأصلي: <span style="color:#EDF1F5;">' + escapeHtml(d.driver || "—") + '</span> — ' + formatDT(d.driverConfirmedAt) + "</div>" +
+    '<div style="background:#1C1C1E;border-radius:10px;padding:10px 12px;color:#8E8E93;font-size:12px;">الفاحص الأصلي: <span style="color:#FFFFFF;">' + escapeHtml(d.driver || "—") + '</span> — ' + formatDT(d.driverConfirmedAt) + "</div>" +
     "</div>" +
     renderInspectionFields(d) +
     "</div>" +
-    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #10141B 60%, transparent);max-width:480px;margin:0 auto;">' +
+    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #000000 60%, transparent);max-width:480px;margin:0 auto;">' +
     '<button type="button" class="btn-primary" data-action="admin-save-report" style="width:100%;opacity:' + (d.saving ? "0.7" : "1") + ';" ' + (d.saving ? "disabled" : "") + ">" + (d.saving ? "جاري الحفظ..." : "حفظ التعديلات") + "</button></div>" +
     "</div>";
 }
@@ -1013,15 +1113,15 @@ function renderPrintOverlay() {
   var record = state.printRecord;
   return '<div id="print-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
     '<div style="width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
-    '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #2A3340;">' +
-    '<div style="color:#EDF1F5;font-size:15px;font-weight:700;">معاينة التقرير</div>' +
-    '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A96A3" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
+    '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #38383A;">' +
+    '<div style="color:#FFFFFF;font-size:15px;font-weight:700;">معاينة التقرير</div>' +
+    '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
     '<div class="print-scrollwrap" style="overflow-y:auto;padding:14px;"><div id="print-area">' + renderReport(record) + "</div></div>" +
-    '<div class="no-print" style="padding:14px;border-top:1px solid #2A3340;">' +
+    '<div class="no-print" style="padding:14px;border-top:1px solid #38383A;">' +
     '<button type="button" class="btn-primary" data-action="do-print" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;opacity:' + (state.printSaving ? "0.7" : "1") + ';">' +
     (state.printSaving
       ? '<span class="spin">⟳</span> جارٍ التجهيز...'
-      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B1013" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg> طباعة / حفظ كصورة') +
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg> طباعة / حفظ كصورة') +
     "</button></div></div></div>";
 }
 
@@ -1061,7 +1161,14 @@ function goNew() {
   state.screen = "new";
   render();
 }
-function openDetail(id) { state.selectedId = id; state.screen = "detail"; render(); }
+function openDetail(id) {
+  state.selectedId = id;
+  state.screen = "detail";
+  state.detailDeleteOpen = false;
+  state.detailDeletePinTry = "";
+  state.detailDeleteError = "";
+  render();
+}
 function goVehicles() { state.newVehicleCode = ""; state.vehicleError = ""; state.screen = "vehicles"; render(); }
 function goReports() { state.reportsCarQuery = ""; state.reportsDriverFilter = ""; state.screen = "reports"; render(); }
 
@@ -1101,6 +1208,9 @@ function adminSaveDriverPin(name) {
   if (!/^[0-9]{4}$/.test(pin)) { state.adminPinMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminPinMsgOk = false; render(); return; }
   if (!db) { state.adminPinMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.adminPinMsgOk = false; render(); return; }
   hashPin(pin).then(function (hash) {
+    if (pinHashTakenByOther(driverPinsCache, hash, name)) {
+      state.adminPinMsg = "هذا الرمز مستخدم من قبل فاحص آخر — اختر رمزًا مختلفًا"; state.adminPinMsgOk = false; render(); return;
+    }
     db.collection("driverPins").doc(name).set({ hash: hash }).then(function () {
       state.adminPinMsg = "تم تحديث الرمز بنجاح"; state.adminPinMsgOk = true; state.adminNewPin = ""; render();
     }).catch(function (e) { console.error(e); state.adminPinMsg = "تعذّر الحفظ"; state.adminPinMsgOk = false; render(); });
@@ -1111,6 +1221,9 @@ function adminSaveAdminPin(name) {
   if (!/^[0-9]{4}$/.test(pin)) { state.adminPinMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminPinMsgOk = false; render(); return; }
   if (!db) { state.adminPinMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.adminPinMsgOk = false; render(); return; }
   hashPin(pin).then(function (hash) {
+    if (pinHashTakenByOther(adminsCache, hash, name)) {
+      state.adminPinMsg = "هذا الرمز مستخدم من قبل أدمن آخر — اختر رمزًا مختلفًا"; state.adminPinMsgOk = false; render(); return;
+    }
     db.collection("admins").doc(name).set({ hash: hash }).then(function () {
       state.adminPinMsg = "تم تحديث الرمز بنجاح"; state.adminPinMsgOk = true; state.adminNewPin = ""; render();
     }).catch(function (e) { console.error(e); state.adminPinMsg = "تعذّر الحفظ"; state.adminPinMsgOk = false; render(); });
@@ -1124,6 +1237,9 @@ function adminAddAdmin() {
   if (adminsCache[name]) { state.adminAddMsg = "هذا الاسم موجود مسبقًا بين الأدمنز"; state.adminAddMsgOk = false; render(); return; }
   if (!db) { state.adminAddMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.adminAddMsgOk = false; render(); return; }
   hashPin(pin).then(function (hash) {
+    if (pinHashTakenByOther(adminsCache, hash, name)) {
+      state.adminAddMsg = "هذا الرمز مستخدم من قبل أدمن آخر — اختر رمزًا مختلفًا"; state.adminAddMsgOk = false; render(); return;
+    }
     db.collection("admins").doc(name).set({ hash: hash }).then(function () {
       state.adminAddMsg = "تمت إضافة الأدمن بنجاح"; state.adminAddMsgOk = true;
       state.adminNewAdminName = ""; state.adminNewAdminPin = ""; render();
@@ -1193,6 +1309,47 @@ function saveAdminEditReport() {
     d.errorMsg = "تعذّر الحفظ: تحقق من الإنترنت وحاول مرة أخرى";
     render();
   });
+}
+
+function adminDeleteReport(id) {
+  if (!state.adminUnlocked || !db) return;
+  if (!window.confirm("هل أنت متأكد من حذف هذا الفحص؟ لا يمكن التراجع عن هذا الإجراء.")) return;
+  db.collection("inspections").doc(id).delete().then(function () {
+    goHome();
+  }).catch(function (e) {
+    console.error("delete failed", e);
+    window.alert("تعذّر حذف الفحص: تحقق من الإنترنت وحاول مرة أخرى");
+  });
+}
+
+function checkOwnDeletePin() {
+  var record = inspectionsCache[state.selectedId];
+  if (!record) return;
+  var entered = state.detailDeletePinTry.trim();
+  if (!/^[0-9]{4}$/.test(entered)) return;
+  hashPin(entered).then(function (hash) {
+    if (record.driver && driverPinsCache[record.driver] === hash) {
+      if (!db) { state.detailDeleteError = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.detailDeletePinTry = ""; render(); return; }
+      db.collection("inspections").doc(record.id).delete().then(function () {
+        goHome();
+      }).catch(function (e) {
+        console.error("delete failed", e);
+        state.detailDeleteError = "تعذّر حذف الفحص: تحقق من الإنترنت وحاول مرة أخرى";
+        state.detailDeletePinTry = "";
+        render();
+      });
+    } else {
+      state.detailDeleteError = "رمز غير صحيح";
+      state.detailDeletePinTry = "";
+      render();
+    }
+  });
+}
+
+// Returns true if `hash` already belongs to a different name inside `cache`
+// (used to enforce that no two inspectors, and no two admins, share a PIN).
+function pinHashTakenByOther(cache, hash, ownName) {
+  return Object.keys(cache).some(function (name) { return name !== ownName && cache[name] === hash; });
 }
 
 function handleAddVehicle() {
@@ -1310,6 +1467,45 @@ function checkInspectorCode() {
   });
 }
 
+function saveOwnDriverPin() {
+  if (!draft.pinVerified || !draft.driver) return;
+  var pin = (draft.newPin || "").trim();
+  if (!/^[0-9]{4}$/.test(pin)) { draft.changePinMsg = "الرمز يجب أن يكون 4 أرقام"; draft.changePinMsgOk = false; render(); return; }
+  if (!db) { draft.changePinMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; draft.changePinMsgOk = false; render(); return; }
+  hashPin(pin).then(function (hash) {
+    if (pinHashTakenByOther(driverPinsCache, hash, draft.driver)) {
+      draft.changePinMsg = "هذا الرمز مستخدم من قبل فاحص آخر — اختر رمزًا مختلفًا"; draft.changePinMsgOk = false; render(); return;
+    }
+    db.collection("driverPins").doc(draft.driver).set({ hash: hash }).then(function () {
+      draft.changePinMsg = "تم تغيير رمزك بنجاح"; draft.changePinMsgOk = true; draft.newPin = "";
+      if (draft.rememberPin) { lsSet("vi_remembered_pin", pin); }
+      render();
+    }).catch(function (e) {
+      console.error(e);
+      draft.changePinMsg = "تعذّر الحفظ"; draft.changePinMsgOk = false; render();
+    });
+  });
+}
+
+function saveAdminSelfPin() {
+  if (!state.adminUnlocked || !state.adminName) return;
+  var pin = (state.adminSelfNewPin || "").trim();
+  if (!/^[0-9]{4}$/.test(pin)) { state.adminSelfPinMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminSelfPinMsgOk = false; render(); return; }
+  if (!db) { state.adminSelfPinMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.adminSelfPinMsgOk = false; render(); return; }
+  hashPin(pin).then(function (hash) {
+    if (pinHashTakenByOther(adminsCache, hash, state.adminName)) {
+      state.adminSelfPinMsg = "هذا الرمز مستخدم من قبل أدمن آخر — اختر رمزًا مختلفًا"; state.adminSelfPinMsgOk = false; render(); return;
+    }
+    db.collection("admins").doc(state.adminName).set({ hash: hash }).then(function () {
+      state.adminSelfPinMsg = "تم تغيير رمزك بنجاح"; state.adminSelfPinMsgOk = true; state.adminSelfNewPin = "";
+      render();
+    }).catch(function (e) {
+      console.error(e);
+      state.adminSelfPinMsg = "تعذّر الحفظ"; state.adminSelfPinMsgOk = false; render();
+    });
+  });
+}
+
 /* =================================================================
    PNG capture + native share / download (used by the print modal)
 ================================================================= */
@@ -1422,6 +1618,7 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "filter-by-driver") { state.reportsDriverFilter = state.reportsDriverFilter === t.dataset.driver ? "" : t.dataset.driver; render(); }
     else if (action === "clear-home-date") { state.homeDate = ""; render(); }
     else if (action === "add-vehicle") handleAddVehicle();
+    else if (action === "delete-vehicle") deleteVehicle(t.dataset.code);
     else if (action === "open-detail") openDetail(t.dataset.id);
     else if (action === "lookup-past") lookupPast();
     else if (action === "select-type") { activeDraft().selectedType = t.dataset.type; render(); }
@@ -1448,6 +1645,12 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "admin-edit-report") goAdminEditReport(t.dataset.id);
     else if (action === "admin-cancel-edit") { state.screen = "detail"; render(); }
     else if (action === "admin-save-report") saveAdminEditReport();
+    else if (action === "admin-delete-report") adminDeleteReport(t.dataset.id);
+    else if (action === "toggle-own-delete") { state.detailDeleteOpen = !state.detailDeleteOpen; state.detailDeletePinTry = ""; state.detailDeleteError = ""; render(); }
+    else if (action === "toggle-change-pin") { draft.changePinOpen = !draft.changePinOpen; draft.newPin = ""; draft.changePinMsg = ""; render(); }
+    else if (action === "save-own-pin") saveOwnDriverPin();
+    else if (action === "toggle-admin-self-pin") { state.adminSelfPinOpen = !state.adminSelfPinOpen; state.adminSelfNewPin = ""; state.adminSelfPinMsg = ""; render(); }
+    else if (action === "save-admin-self-pin") saveAdminSelfPin();
   });
 
   app.addEventListener("input", function (e) {
@@ -1495,6 +1698,15 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
     if (field === "adminNewPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminNewPin = t.value; return; }
+    if (field === "detailDeletePinTry") {
+      t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4);
+      state.detailDeletePinTry = t.value;
+      state.detailDeleteError = "";
+      if (t.value.length === 4) checkOwnDeletePin();
+      return;
+    }
+    if (field === "newPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); draft.newPin = t.value; draft.changePinMsg = ""; return; }
+    if (field === "adminSelfNewPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminSelfNewPin = t.value; state.adminSelfPinMsg = ""; return; }
     if (field === "adminNewAdminName") { state.adminNewAdminName = t.value; return; }
     if (field === "adminNewAdminPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminNewAdminPin = t.value; return; }
     activeDraft()[field] = t.value;
