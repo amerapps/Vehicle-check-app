@@ -55,7 +55,7 @@
   .chk-box.on { background: var(--ios-blue); border: none; }
   .type-btn { border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; border: 1px solid var(--ios-sep); background: var(--ios-card2); }
   .type-btn.sel { }
-  .ios-header { position: sticky !important; top: 0 !important; z-index: 5; padding-top: calc(20px + env(safe-area-inset-top, 0px)) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(0,0,0,0.78); border-bottom: 0.5px solid var(--ios-sep); }
+  .ios-header { position: sticky !important; top: 0 !important; z-index: 5; padding-top: calc(30px + env(safe-area-inset-top, 0px)) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(0,0,0,0.78); border-bottom: 0.5px solid var(--ios-sep); }
   @media print {
     #screen-root { display: none !important; }
     #print-overlay { position: static !important; inset: auto !important; background: none !important; display: block !important; height: auto !important; }
@@ -905,7 +905,7 @@ function renderHome() {
   }
 
   return '<div style="padding-bottom:90px;">' +
-    '<div style="padding:22px 18px 8px;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">' +
+    '<div style="padding:calc(52px + env(safe-area-inset-top, 0px)) 18px 8px;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">' +
     '<div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#0A84FF,#0060DF);display:flex;align-items:center;justify-content:center;">' +
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></div>' +
     '<div style="flex:1;"><div style="color:#FFFFFF;font-size:19px;font-weight:800;">فحص السيارات</div><div style="color:#8E8E93;font-size:12px;">سجل الفحوصات الدوري</div></div>' +
