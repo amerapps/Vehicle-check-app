@@ -331,7 +331,7 @@ function addVehicle(code) {
 function deleteVehicle(code) {
   if (!state.adminUnlocked) return;
   if (!db) return;
-  if (!window.confirm('هل أنت متأكد من حذف المركبة "' + code + '"؟')) return;
+  if (!window.confirm(tr('هل أنت متأكد من حذف المركبة "' + code + '"؟'))) return;
   vehiclesCache = vehiclesCache.filter(function (v) { return v !== code; });
   render();
   db.collection("vehicles").doc(code).delete().catch(function (e) { console.error(e); });
@@ -398,15 +398,253 @@ function badgeColorFor(damages) {
 }
 
 /* =================================================================
+   Language (Arabic / English)
+   The app is authored entirely in Arabic. Rather than duplicate every
+   render function, we translate the already-rendered DOM text after
+   each render() when the user picks English — this keeps the two
+   languages perfectly in sync with zero risk of the logic drifting.
+   Only UI chrome is translated; data the user typed (driver names,
+   car codes, notes) is left exactly as entered.
+================================================================= */
+var I18N_EXACT = {
+  "فحص السيارات": "Vehicle Inspection",
+  "سجل الفحوصات الدوري": "Periodic inspection log",
+  "فحص جديد": "New Inspection",
+  "المركبات": "Vehicles",
+  "التقارير": "Reports",
+  "لوحة الإدارة": "Admin Panel",
+  "تفاصيل الفحص": "Inspection Details",
+  "بيانات الفحص": "Inspection Data",
+  "حالة الهيكل": "Body Condition",
+  "ملاحظات على الميكانيك / غرفة السائق والركاب": "Notes on mechanics / driver & passenger cabin",
+  "ملاحظات على الميكانيك أو غرفة السائق والركاب": "Notes on mechanics or driver & passenger cabin",
+  "التجهيزات": "Equipment",
+  "هوية الفاحص": "Inspector Identity",
+  "منطقة الخطر": "Danger Zone",
+  "إضافة مركبة جديدة": "Add New Vehicle",
+  "حسب الفاحص": "By Inspector",
+  "طباعة حسب رقم السيارة": "Print by Car Code",
+  "الأدمنز": "Admins",
+  "إضافة أدمن جديد": "Add New Admin",
+  "تغيير رموز الفاحصين": "Change Inspector Codes",
+  "رمز الأدمن": "Admin Code",
+  "تعديل الفحص (إدارة)": "Edit Inspection (Admin)",
+  "معاينة التقرير": "Report Preview",
+  "آخر فحوصات لهذه السيارة": "Recent inspections for this car",
+  "آخر فحوصات لهذه السيارة (كمرجع)": "Recent inspections for this car (for reference)",
+  "المكان": "Location",
+  "رمز السيارة": "Car Code",
+  "التاريخ والوقت": "Date & Time",
+  "رمز الفاحص": "Inspector Code",
+  "الفاحص": "Inspector",
+  "الاسم": "Name",
+  "الرمز (4 أرقام)": "Code (4 digits)",
+  "فحص الهيكل": "Body Inspection",
+  "أخرى": "Other",
+  "إضافة": "Add",
+  "إلغاء": "Cancel",
+  "حفظ": "Save",
+  "تغيير": "Change",
+  "تغيير الرمز": "Change Code",
+  "تغيير رمزي": "Change My Code",
+  "تغيير رمزي الشخصي": "Change My Personal Code",
+  "تسجيل خروج": "Log Out",
+  "خروج": "Log Out",
+  "طباعة": "Print",
+  "حفظ الفحص": "Save Inspection",
+  "حفظ التعديلات": "Save Changes",
+  "جاري الحفظ...": "Saving...",
+  "تعديل": "Edit",
+  "حذف هذا الفحص": "Delete This Inspection",
+  "حذف الفحص (كفاحص صاحب الفحص)": "Delete Inspection (as owning inspector)",
+  "عرض / طباعة هذا الفحص": "View / Print This Inspection",
+  "تراجع عن آخر علامة": "Undo Last Mark",
+  "🔍 فحوصات سابقة": "🔍 Past Inspections",
+  "طباعة / حفظ كملف PDF": "Print / Save as PDF",
+  "في نافذة الطباعة، اختر \"حفظ كـ PDF\" — سيتم حفظ التقرير دائمًا بحجم ورقة A4": "In the print dialog, choose \"Save as PDF\" — the report will always be saved at A4 paper size",
+  "تفاصيل إضافية عن المكان (اختياري)": "Additional location details (optional)",
+  "اختر نوع الضرر ثم اضغط مباشرة على الجزء المتضرر من السيارة": "Choose the damage type, then tap directly on the damaged part of the car",
+  "أي ملاحظات ميكانيكية، أو داخل المقصورة (مقاعد، ديكور، رائحة، أعطال...)": "Any mechanical notes, or inside the cabin (seats, trim, smell, faults...)",
+  "بند إضافي": "Additional item",
+  "مثال: 22721": "Example: 22721",
+  "رمز المركبة": "Vehicle Code",
+  "مثال: 1234": "Example: 1234",
+  "اسم الأدمن الجديد": "New admin name",
+  "رمز جديد (4 أرقام)": "New code (4 digits)",
+  "رمز جديد": "New Code",
+  "رمزك المكوّن من 4 أرقام": "Your 4-digit code",
+  "أدخل رمزك المكوّن من 4 أرقام": "Enter your 4-digit code",
+  "أدخل رمز الأدمن المكوّن من 4 أرقام": "Enter the admin's 4-digit code",
+  "رمز جديد (4 أرقام) — يجب ألا يشابه رمز فاحص آخر": "New code (4 digits) — must not match another inspector's code",
+  "تذكرني على هذا الجهاز": "Remember me on this device",
+  "ابحث برمز السيارة، المكان، أو الفاحص": "Search by car code, location, or inspector",
+  "ادخل رقم السيارة": "Enter car number",
+  "اشرح نوع الضرر...": "Describe the type of damage...",
+  "لا يوجد فحوصات بعد": "No inspections yet",
+  "لا توجد نتائج مطابقة": "No matching results",
+  "ابدأ بإنشاء أول فحص لسيارة": "Start by creating the first inspection",
+  "جرّب كلمات بحث أو تاريخ مختلف": "Try different search words or date",
+  "سليمة": "Sound (no damage)",
+  "بدون رمز": "No code",
+  "لا توجد فحوصات لهذا الرقم": "No inspections for this number",
+  "لا توجد فحوصات لهذا الفاحص": "No inspections for this inspector",
+  "لا توجد ملاحظات مسجّلة — السيارة سليمة": "No recorded notes — car is sound",
+  "لا توجد ملاحظات — السيارة سليمة": "No notes — car is sound",
+  "لا توجد ملاحظات": "No notes",
+  "لا يوجد فحوصات سابقة بهذا الرمز": "No past inspections with this code",
+  "تعذّر العثور على هذا الفحص": "Could not find this inspection",
+  "تعذّر تحميل الفحص": "Could not load the inspection",
+  "أدخل رمز الفاحص الصحيح لفتح باقي الفحص": "Enter the correct inspector code to unlock the rest of the inspection",
+  "رمز غير صحيح": "Incorrect code",
+  "الرمز يجب أن يكون 4 أرقام": "The code must be 4 digits",
+  "الرجاء إدخال اسم": "Please enter a name",
+  "الرجاء إدخال رمز السيارة": "Please enter the car code",
+  "الرجاء إدخال رمز الفاحص الصحيح أولاً": "Please enter the correct inspector code first",
+  "لا يوجد اتصال بالخدمة السحابية حاليًا": "No connection to the cloud service currently",
+  "لا يوجد اتصال بالخدمة السحابية حاليًا — تحقق من الإنترنت وحاول مرة أخرى": "No connection to the cloud service currently — check your internet and try again",
+  "تعذّر الحفظ": "Could not save",
+  "تعذّر الحفظ: تحقق من الإنترنت وحاول مرة أخرى": "Could not save: check your internet and try again",
+  "تعذّر حذف الفحص: تحقق من الإنترنت وحاول مرة أخرى": "Could not delete the inspection: check your internet and try again",
+  "تم تحديث الرمز بنجاح": "Code updated successfully",
+  "تم تغيير رمزك بنجاح": "Your code was changed successfully",
+  "تمت إضافة الأدمن بنجاح": "Admin added successfully",
+  "هذا الرمز مستخدم من قبل فاحص آخر — اختر رمزًا مختلفًا": "This code is already used by another inspector — choose a different one",
+  "هذا الرمز مستخدم من قبل أدمن آخر — اختر رمزًا مختلفًا": "This code is already used by another admin — choose a different one",
+  "هذا الاسم موجود مسبقًا بين الأدمنز": "This name already exists among admins",
+  "رمز المركبة موجود مسبقًا في القائمة": "This vehicle code already exists in the list",
+  "رمز المركبة يجب أن يكون أرقامًا فقط": "The vehicle code must be numbers only",
+  "إضافة المركبات متاحة فقط لحساب الإدارة": "Adding vehicles is available only to the admin account",
+  "إضافة أو حذف المركبات متاح فقط لحساب الإدارة (لوحة الإدارة).": "Adding or removing vehicles is available only to the admin account (Admin Panel).",
+  "جاري الاتصال بالخدمة السحابية...": "Connecting to the cloud service...",
+  "جاري البحث...": "Searching...",
+  "تعذّر الاتصال بالخدمة السحابية — تحقق من الإنترنت": "Could not connect to the cloud service — check your internet",
+  "تعذّر تهيئة الخدمة السحابية": "Could not initialize the cloud service",
+  "لم يتم ضبط إعدادات Firebase في التطبيق بعد": "Firebase settings have not been configured in the app yet",
+  "هل أنت متأكد من حذف هذا الفحص؟ لا يمكن التراجع عن هذا الإجراء.": "Are you sure you want to delete this inspection? This action cannot be undone.",
+  "تعديل الرمز السري لأي فاحص من القائمة": "Change the secret code for any inspector from the list",
+  "إضافة أدمن جديد أو تغيير رمز أدمن حالي": "Add a new admin or change an existing admin's code",
+  "يجب ألا يشابه رمز أدمن آخر": "Must not match another admin's code",
+  "لتعديل تقرير محفوظ: افتحه من الصفحة الرئيسية، وسيظهر زر \"تعديل\" أعلى الصفحة طالما إنت مسجّل دخول هون.": "To edit a saved report: open it from the home screen — an \"Edit\" button will appear at the top as long as you're logged in here.",
+  "التقويم — الرجوع لفحص قديم": "Calendar — go back to an old inspection",
+  "مخطط السيارة": "Car diagram",
+  "الفاحص الأصلي:": "Original inspector:",
+  "تقرير فحص السيارة": "Vehicle Inspection Report",
+  "تاريخ الفحص": "Inspection Date",
+  "وقت الفحص": "Inspection Time",
+  "خبطة / انبعاج (Dent)": "Dent",
+  "خدش (Scratch)": "Scratch",
+  "مكسور (Broken)": "Broken",
+  "أخرى (Other)": "Other",
+  "عدة الرفع": "Jack",
+  "طفاية حريق": "Fire Extinguisher",
+  "التأمين": "Insurance",
+  "مرآة داخلية": "Inside Mirror",
+  "راديو / مسجل": "Radio / Player",
+  "طفاية سجائر": "Ashtray",
+  "عدة أدوات": "Toolkit",
+  "إسعافات أولية": "First Aid Kit",
+  "أغطية العجلات": "Wheel Covers",
+  "ساعة": "Clock",
+  "مرآة يمين": "Right Mirror",
+  "ولاعة": "Lighter",
+  "الرخصة": "License",
+  "مرآة يسار": "Left Mirror",
+  "المقدمة (FRT) - الجانب الأيمن (R/H)": "Front (FRT) - Right Side (R/H)",
+  "المقدمة (FRT) - الجانب الأيسر (L/H)": "Front (FRT) - Left Side (L/H)",
+  "المؤخرة (RR) - الجانب الأيمن (R/H)": "Rear (RR) - Right Side (R/H)",
+  "المؤخرة (RR) - الجانب الأيسر (L/H)": "Rear (RR) - Left Side (L/H)",
+  "المنتصف - الجانب الأيمن (R/H)": "Middle - Right Side (R/H)",
+  "المنتصف - الجانب الأيسر (L/H)": "Middle - Left Side (L/H)",
+  "أدخل رمزك السري لتأكيد حذف هذا الفحص (يجب أن تكون أنت الفاحص صاحب هذا الفحص)": "Enter your secret code to confirm deleting this inspection (you must be the inspector who owns it)"
+};
+
+var I18N_REGEX = [
+  [/^قائمة المركبات \((\d+)\)$/, function (m) { return "Vehicle List (" + m[1] + ")"; }],
+  [/^الأدمنز الحاليين \((\d+)\)$/, function (m) { return "Current Admins (" + m[1] + ")"; }],
+  [/^طباعة \/ حفظ فحوصات هذا اليوم \((\d+)\)$/, function (m) { return "Print / Save Today's Inspections (" + m[1] + ")"; }],
+  [/^مسح فلتر التاريخ \((.+)\)$/, function (m) { return "Clear Date Filter (" + m[1] + ")"; }],
+  [/^فحوصات يوم (.+) \((\d+)\)$/, function (m) { return "Inspections for " + m[1] + " (" + m[2] + ")"; }],
+  [/^(\d+) ملاحظات$/, function (m) { return m[1] + " notes"; }],
+  [/^(\d+) فحص$/, function (m) { return m[1] + " inspections"; }],
+  [/^مسجّل دخول كـ (.+)$/, function (m) { return "Logged in as " + m[1]; }],
+  [/^أخرى: (.+)$/, function (m) { return "Other: " + m[1]; }],
+  [/^بتاريخ: (.+) — الوقت: (.+)$/, function (m) { return "Date: " + m[1] + " — Time: " + m[2]; }],
+  [/^تم تأكيد الهوية عبر الرمز الشخصي بتاريخ (.+)$/, function (m) { return "Identity confirmed via personal code on " + m[1]; }],
+  [/^✔ تم تأكيد الهوية عبر الرمز الشخصي لـ$/, function () { return "✔ Identity confirmed via personal code for"; }],
+  [/^هل أنت متأكد من حذف المركبة "(.+)"؟$/, function (m) { return 'Are you sure you want to delete vehicle "' + m[1] + '"?'; }]
+];
+
+// Translates a whole string (used for window.confirm/alert dialogs).
+function tr(raw) {
+  if (state.lang !== "en" || !raw) return raw;
+  var key = String(raw).trim();
+  if (I18N_EXACT.hasOwnProperty(key)) return I18N_EXACT[key];
+  for (var i = 0; i < I18N_REGEX.length; i++) {
+    var m = key.match(I18N_REGEX[i][0]);
+    if (m) return I18N_REGEX[i][1](m);
+  }
+  return raw;
+}
+
+// Translates one DOM text node's content, preserving surrounding
+// whitespace exactly, or returns null if nothing matched (leave as-is).
+function translateFragment(raw) {
+  var lead = raw.match(/^\s*/)[0];
+  var trail = raw.match(/\s*$/)[0];
+  var core = raw.slice(lead.length, raw.length - trail.length);
+  if (!core) return null;
+  if (I18N_EXACT.hasOwnProperty(core)) return lead + I18N_EXACT[core] + trail;
+  for (var i = 0; i < I18N_REGEX.length; i++) {
+    var m = core.match(I18N_REGEX[i][0]);
+    if (m) return lead + I18N_REGEX[i][1](m) + trail;
+  }
+  return null;
+}
+
+function translateAttr(el, attr) {
+  var v = el.getAttribute(attr);
+  if (!v) return;
+  var t = translateFragment(v);
+  if (t !== null) el.setAttribute(attr, t);
+}
+
+function applyLanguage() {
+  var isEn = state.lang === "en";
+  document.documentElement.setAttribute("dir", isEn ? "ltr" : "rtl");
+  document.documentElement.setAttribute("lang", isEn ? "en" : "ar");
+  if (!isEn) return; // Arabic is the app's native markup — nothing to translate back
+  var root = document.getElementById("app");
+  if (!root) return;
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  var node, toChange = [];
+  while ((node = walker.nextNode())) {
+    if (!node.nodeValue || !/[\u0600-\u06FF]/.test(node.nodeValue)) continue;
+    var t = translateFragment(node.nodeValue);
+    if (t !== null) toChange.push([node, t]);
+  }
+  toChange.forEach(function (pair) { pair[0].nodeValue = pair[1]; });
+  root.querySelectorAll("[placeholder]").forEach(function (el) { translateAttr(el, "placeholder"); });
+  root.querySelectorAll("[title]").forEach(function (el) { translateAttr(el, "title"); });
+  root.querySelectorAll("img[alt]").forEach(function (el) { translateAttr(el, "alt"); });
+}
+
+function renderLangToggle() {
+  var isEn = state.lang === "en";
+  return '<button type="button" class="no-print" data-action="toggle-lang" style="position:fixed;top:calc(10px + env(safe-area-inset-top,0px));' + (isEn ? "left" : "right") + ':12px;z-index:70;background:#2C2C2E;border:1px solid #38383A;border-radius:999px;padding:6px 12px;color:#FFFFFF;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;">' +
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20 15 15 0 010-20z"/></svg>' +
+    (isEn ? "العربية" : "English") + "</button>";
+}
+
+/* =================================================================
    App state
 ================================================================= */
 var state = {
+  lang: (function () { try { return localStorage.getItem("vi_lang") || "ar"; } catch (e) { return "ar"; } })(),
   screen: "home",
   selectedId: null,
   homeQuery: "",
   homeDate: "",
   printRecord: null,
-  printSaving: false,
   printBatch: null,
   newVehicleCode: "",
   vehicleError: "",
@@ -449,9 +687,6 @@ function freshDraft() {
     mechanicNotes: "",
     checklist: emptyChecklist(),
     otherText: "",
-    lastDriver: "",
-    lastDriverDateTime: "",
-    dispatchComments: "",
     pastInspections: null,
     pastLoading: false,
     errorMsg: "",
@@ -601,14 +836,6 @@ function renderReport(record) {
 
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">هوية الفاحص</div>' +
     '<div style="font-size:12px;line-height:1.55;">✔ تم تأكيد الهوية عبر الرمز الشخصي لـ <b>' + escapeHtml(record.driver || "—") + '</b><div style="color:#555;margin-top:3px;">بتاريخ: ' + formatDateOnly(record.driverConfirmedAt) + ' — الوقت: ' + formatTimeOnly(record.driverConfirmedAt) + "</div></div>" +
-
-    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">معلومات إضافية</div>' +
-    '<div class="vi-info-grid" style="display:grid;grid-template-columns:1fr;gap:0 20px;">' +
-    cell("آخر سائق", record.lastDriver) +
-    cell("تاريخ آخر سائق", formatDateOnly(record.lastDriverDateTime)) +
-    cell("وقت آخر سائق", formatTimeOnly(record.lastDriverDateTime)) +
-    cell("ملاحظات المرسل", record.dispatchComments, true) +
-    "</div>" +
     "</div>";
 }
 
@@ -886,12 +1113,6 @@ function renderInspectionFields(d) {
     '<div style="margin-top:10px;"><label class="label">أخرى</label><input class="input" data-field="otherText" list="dl-otherText" placeholder="بند إضافي" value="' + escapeHtml(d.otherText) + '" />' + datalistHtml("dl-otherText", "otherText") + "</div>" +
     "</div>" +
 
-    '<div class="section"><div class="section-title">معلومات إضافية</div>' +
-    '<div style="margin-bottom:10px;"><label class="label">آخر سائق</label><input class="input" data-field="lastDriver" list="dl-lastDriver" value="' + escapeHtml(d.lastDriver) + '" />' + datalistHtml("dl-lastDriver", "lastDriver") + "</div>" +
-    '<div style="margin-bottom:10px;"><label class="label">تاريخ ووقت آخر سائق</label><input type="datetime-local" class="input" data-field="lastDriverDateTime" value="' + d.lastDriverDateTime + '" /></div>' +
-    '<div><label class="label">ملاحظات المرسل</label><textarea class="input" data-field="dispatchComments" list="dl-dispatchComments" rows="3" style="resize:none;">' + escapeHtml(d.dispatchComments) + "</textarea>" + datalistHtml("dl-dispatchComments", "dispatchComments") + "</div>" +
-    "</div>" +
-
     (d.errorMsg ? '<div style="color:#FF453A;font-size:13px;text-align:center;margin-bottom:10px;">' + escapeHtml(d.errorMsg) + "</div>" : "");
 }
 
@@ -980,7 +1201,6 @@ function renderDetail() {
     '<div class="section"><div class="section-title">التجهيزات</div>' + checklistHtml + (record.otherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.otherText) + "</div>" : "") + "</div>" +
     '<div class="section"><div class="section-title">هوية الفاحص</div>' + row("الفاحص", record.driver) +
     '<div style="display:flex;align-items:center;gap:6px;color:#0A84FF;font-size:13px;margin-top:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> تم تأكيد الهوية عبر الرمز الشخصي بتاريخ ' + formatDT(record.driverConfirmedAt) + "</div></div>" +
-    '<div class="section"><div class="section-title">معلومات إضافية</div>' + row("آخر سائق", record.lastDriver) + row("تاريخ ووقت آخر سائق", formatDT(record.lastDriverDateTime)) + row("ملاحظات المرسل", record.dispatchComments) + "</div>" +
     renderDeleteReportSection(record) +
     "</div></div>";
 }
@@ -1147,11 +1367,10 @@ function renderPrintOverlay() {
     '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
     '<div class="print-scrollwrap" style="overflow-y:auto;padding:14px;"><div id="print-area">' + renderReport(record) + "</div></div>" +
     '<div class="no-print" style="padding:14px;border-top:1px solid #38383A;">' +
-    '<button type="button" class="btn-primary" data-action="do-print" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;opacity:' + (state.printSaving ? "0.7" : "1") + ';">' +
-    (state.printSaving
-      ? '<span class="spin">⟳</span> جارٍ التجهيز...'
-      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg> طباعة / حفظ كصورة') +
-    "</button></div></div></div>";
+    '<button type="button" class="btn-primary" data-action="do-print" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg> طباعة / حفظ كملف PDF</button>' +
+    '<div style="color:#8E8E93;font-size:11px;margin-top:8px;text-align:center;">في نافذة الطباعة، اختر "حفظ كـ PDF" — سيتم حفظ التقرير دائمًا بحجم ورقة A4</div>' +
+    "</div></div></div>";
 }
 
 function renderBatchPrintOverlay() {
@@ -1191,7 +1410,8 @@ function render(preserveScroll) {
   else if (state.screen === "adminPins") html = state.adminUnlocked ? renderAdminDrivers() : renderAdminGate();
   else if (state.screen === "adminAdmins") html = state.adminUnlocked ? renderAdminAdmins() : renderAdminGate();
   else if (state.screen === "adminEditReport") html = state.adminUnlocked ? renderAdminEditReport() : renderAdminGate();
-  app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay() + renderBatchPrintOverlay();
+  app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay() + renderBatchPrintOverlay() + renderLangToggle();
+  applyLanguage();
   if (preserveScroll) window.scrollTo(0, scrollSave);
 }
 
@@ -1309,9 +1529,6 @@ function loadAdminEditDraft(record) {
     mechanicNotes: record.mechanicNotes || "",
     checklist: Object.assign(emptyChecklist(), record.checklist || {}),
     otherText: record.otherText || "",
-    lastDriver: record.lastDriver || "",
-    lastDriverDateTime: record.lastDriverDateTime || "",
-    dispatchComments: record.dispatchComments || "",
     errorMsg: "",
     saving: false
   };
@@ -1342,9 +1559,6 @@ function saveAdminEditReport() {
     mechanicNotes: d.mechanicNotes.trim(),
     checklist: d.checklist,
     otherText: d.otherText.trim(),
-    lastDriver: d.lastDriver.trim(),
-    lastDriverDateTime: d.lastDriverDateTime,
-    dispatchComments: d.dispatchComments.trim(),
     editedByAdmin: state.adminName || "",
     editedAt: nowIso()
   };
@@ -1362,12 +1576,12 @@ function saveAdminEditReport() {
 
 function adminDeleteReport(id) {
   if (!state.adminUnlocked || !db) return;
-  if (!window.confirm("هل أنت متأكد من حذف هذا الفحص؟ لا يمكن التراجع عن هذا الإجراء.")) return;
+  if (!window.confirm(tr("هل أنت متأكد من حذف هذا الفحص؟ لا يمكن التراجع عن هذا الإجراء."))) return;
   db.collection("inspections").doc(id).delete().then(function () {
     goHome();
   }).catch(function (e) {
     console.error("delete failed", e);
-    window.alert("تعذّر حذف الفحص: تحقق من الإنترنت وحاول مرة أخرى");
+    window.alert(tr("تعذّر حذف الفحص: تحقق من الإنترنت وحاول مرة أخرى"));
   });
 }
 
@@ -1458,10 +1672,7 @@ function buildRecord() {
     damages: draft.damages,
     mechanicNotes: draft.mechanicNotes.trim(),
     checklist: draft.checklist,
-    otherText: draft.otherText.trim(),
-    lastDriver: draft.lastDriver.trim(),
-    lastDriverDateTime: draft.lastDriverDateTime,
-    dispatchComments: draft.dispatchComments.trim()
+    otherText: draft.otherText.trim()
   };
 }
 
@@ -1481,8 +1692,6 @@ function saveInspection() {
     // remember what was typed, for the "smart" fields next time
     pushHistory("placeNote", record.placeNote);
     pushHistory("otherText", record.otherText);
-    pushHistory("lastDriver", record.lastDriver);
-    pushHistory("dispatchComments", record.dispatchComments);
 
     draft.saving = false;
     goHome();
@@ -1556,73 +1765,13 @@ function saveAdminSelfPin() {
 }
 
 /* =================================================================
-   PNG capture + native share / download (used by the print modal)
+   Printing — always goes through the browser's print dialog so the
+   report is always laid out at fixed A4 size (see the @page rule),
+   regardless of any future design changes. "Save as PDF" in that
+   dialog is the supported way to keep a copy of the report.
 ================================================================= */
-function domNodeToPngDataUrl(node) {
-  var rect = node.getBoundingClientRect();
-  var width = Math.ceil(rect.width);
-  var height = Math.ceil(rect.height);
-  var clone = node.cloneNode(true);
-  clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-  var svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">' +
-    '<foreignObject width="100%" height="100%">' + new XMLSerializer().serializeToString(clone) + "</foreignObject></svg>";
-  var svgDataUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgString);
-  return new Promise(function (resolve, reject) {
-    var img = new Image();
-    img.onload = function () {
-      var scale = 2;
-      var canvas = document.createElement("canvas");
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-      var ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.scale(scale, scale);
-      ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = reject;
-    img.src = svgDataUrl;
-  });
-}
-
-function shareOrDownloadPng(dataUrl, filename) {
-  return fetch(dataUrl).then(function (res) { return res.blob(); }).then(function (blob) {
-    var file = new File([blob], filename, { type: "image/png" });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      return navigator.share({ files: [file], title: "تقرير فحص السيارة" });
-    }
-    var a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }).catch(function (e) {
-    console.error("image save failed", e);
-    var a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  });
-}
-
 function doPrint() {
-  state.printSaving = true;
-  render();
-  var node = document.getElementById("print-area");
-  var done = function () {
-    state.printSaving = false;
-    render();
-    window.print();
-  };
-  if (!node) { done(); return; }
-  domNodeToPngDataUrl(node).then(function (dataUrl) {
-    var filename = "تقرير-فحص-" + (state.printRecord && state.printRecord.carCode ? state.printRecord.carCode : "سيارة") + ".png";
-    return shareOrDownloadPng(dataUrl, filename);
-  }).catch(function (e) { console.error(e); }).then(done);
+  window.print();
 }
 
 function doPrintBatch() {
@@ -1669,6 +1818,11 @@ document.addEventListener("DOMContentLoaded", function () {
     var action = t.dataset.action;
 
     if (action === "close-print") { state.printRecord = null; state.printBatch = null; render(); }
+    else if (action === "toggle-lang") {
+      state.lang = state.lang === "ar" ? "en" : "ar";
+      try { localStorage.setItem("vi_lang", state.lang); } catch (e) {}
+      render();
+    }
     else if (action === "go-home") goHome();
     else if (action === "go-new") goNew();
     else if (action === "go-vehicles") goVehicles();
