@@ -14,6 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-storage-compat.js"></script>
 <style>
   :root {
     --ios-bg: #000000;
@@ -69,6 +70,7 @@
 </head>
 <body>
 <div id="app"></div>
+<input type="file" id="damage-photo-input" accept="image/*" capture="environment" style="display:none" />
 
 <script>
 "use strict";
@@ -162,6 +164,8 @@ var FIREBASE_CONFIG = {
 };
 
 var db = null;
+var storage = null;
+var pendingPhotoDamageId = null;
 var cloudReady = false;
 var cloudError = null;
 var inspectionsCache = {};   // id -> full record
@@ -179,6 +183,7 @@ function initCloud() {
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+    try { storage = firebase.storage(); } catch (e) { console.error("storage init failed", e); }
     try { db.enablePersistence({ synchronizeTabs: true }).catch(function () {}); } catch (e) {}
 
     firebase.auth().signInAnonymously().catch(function (e) {
@@ -341,6 +346,56 @@ function deleteVehicle(code) {
    Small utilities
 ================================================================= */
 function uid() { return "m_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+function findDamageById(id) {
+  var d = activeDraft();
+  return (d.damages || []).find(function (m) { return m.id === id; });
+}
+
+/* Resize/compress a captured photo client-side, show it immediately as a
+   local preview, then upload it to Firebase Storage and swap in the
+   permanent URL once it's up. */
+function handleDamagePhotoFile(file, damageId) {
+  var mark = findDamageById(damageId);
+  if (!mark || !file) return;
+  var reader = new FileReader();
+  reader.onload = function (ev) {
+    var img = new Image();
+    img.onload = function () {
+      var maxDim = 1100;
+      var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      var canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      var dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      mark.photoLocal = dataUrl;
+      mark.uploading = true;
+      render();
+      canvas.toBlob(function (blob) {
+        if (!blob || !storage) { mark.uploading = false; mark.photo = dataUrl; delete mark.photoLocal; render(); return; }
+        var ref = storage.ref().child("damage-photos/" + uid() + ".jpg");
+        ref.put(blob).then(function (snap) { return snap.ref.getDownloadURL(); }).then(function (url) {
+          var m2 = findDamageById(damageId);
+          if (!m2) return;
+          m2.photo = url;
+          m2.uploading = false;
+          delete m2.photoLocal;
+          render();
+        }).catch(function (e) {
+          console.error("photo upload failed", e);
+          var m3 = findDamageById(damageId);
+          if (m3) { m3.uploading = false; m3.photo = dataUrl; delete m3.photoLocal; }
+          render();
+        });
+      }, "image/jpeg", 0.7);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function nowIso() { return new Date().toISOString(); }
 function nowDateTimeLocal() {
   var d = new Date();
@@ -436,6 +491,7 @@ var I18N_EXACT = {
   "رمز السيارة": "Car Code",
   "عداد السيارة الحالي": "Current Odometer",
   "عداد السيارة": "Odometer",
+  "صور الأضرار": "Damage Photos",
   "التاريخ والوقت": "Date & Time",
   "رمز الفاحص": "Inspector Code",
   "الفاحص": "Inspector",
@@ -643,6 +699,7 @@ var state = {
   homeDate: "",
   printRecord: null,
   printBatch: null,
+  viewPhotoUrl: null,
   newVehicleCode: "",
   vehicleError: "",
   reportsCarQuery: "",
@@ -761,10 +818,22 @@ function renderDamageListRow(mark, editable) {
       : (mark.note ? '<div style="color:#8E8E93;font-size:11px;margin-top:4px;">' + escapeHtml(mark.note) + "</div>" : "");
   }
   var removeBtn = editable ? '<button type="button" class="btn-icon" data-action="remove-damage" data-id="' + mark.id + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' : "";
+  var photoUrl = mark.photoLocal || mark.photo || "";
+  var photoHtml = "";
+  if (photoUrl) {
+    photoHtml = '<div style="position:relative;width:52px;height:52px;border-radius:8px;overflow:hidden;flex-shrink:0;">' +
+      '<img src="' + photoUrl + '" data-action="' + (mark.uploading ? "" : "view-damage-photo") + '" data-url="' + escapeHtml(mark.photo || "") + '" style="width:100%;height:100%;object-fit:cover;opacity:' + (mark.uploading ? "0.5" : "1") + ';" />' +
+      (mark.uploading ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;">...جارِ الرفع</div>' : "") +
+      (editable && !mark.uploading ? '<button type="button" data-action="remove-damage-photo" data-id="' + mark.id + '" style="position:absolute;top:1px;left:1px;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' : "") +
+      "</div>";
+  } else if (editable) {
+    photoHtml = '<button type="button" class="btn-icon" data-action="add-damage-photo" data-id="' + mark.id + '" style="width:36px;height:36px;border:1px dashed #38383A;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v13H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>';
+  }
   return '<div style="background:#1C1C1E;border-radius:10px;padding:8px 10px;">' +
     '<div class="row-between"><div style="display:flex;align-items:center;gap:8px;">' +
     '<span style="width:18px;height:18px;border-radius:50%;background:#fff;border:1.4px solid #38383A;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#FFFFFF;flex-shrink:0;">' + mark.type + "</span>" +
-    '<div><div style="color:#FFFFFF;font-size:13px;">' + label + '</div><div style="color:#8E8E93;font-size:11px;">' + TYPE_INFO[mark.type].label + "</div></div></div>" + removeBtn + "</div>" +
+    '<div><div style="color:#FFFFFF;font-size:13px;">' + label + '</div><div style="color:#8E8E93;font-size:11px;">' + TYPE_INFO[mark.type].label + "</div></div></div>" +
+    '<div style="display:flex;align-items:center;gap:6px;">' + photoHtml + removeBtn + "</div></div>" +
     noteHtml + "</div>";
 }
 
@@ -785,6 +854,13 @@ function renderReport(record) {
           '<span style="font-weight:600;flex-shrink:0;">' + classifyPoint(mark.x, mark.y) + '</span>' +
           '<span style="color:#555;">' + TYPE_INFO[mark.type].label + (mark.note ? " · " + escapeHtml(mark.note) : "") + "</span></div>";
       }).join("") + "</div>";
+
+  var damagePhotos = damages.filter(function (d) { return d.photo; });
+  var photosHtml = damagePhotos.length === 0 ? "" :
+    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">صور الأضرار</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">' + damagePhotos.map(function (mark) {
+      return '<div style="border:1px solid #eee;border-radius:8px;overflow:hidden;"><img src="' + mark.photo + '" style="width:100%;height:90px;object-fit:cover;display:block;" /></div>';
+    }).join("") + "</div>";
 
   function cell(label, value, full) {
     return '<div style="' + (full ? "grid-column:1/-1;" : "") + 'padding:6px 0;border-bottom:1px solid #f0f0f0;">' +
@@ -826,6 +902,7 @@ function renderReport(record) {
     renderPrintLegend() +
     '<div style="margin:10px 0;border:1px solid #eee;border-radius:10px;padding:8px;">' + renderCarDiagram(damages, { editable: false, theme: "light", size: 250 }) + "</div>" +
     damagesHtml +
+    photosHtml +
 
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">ملاحظات على الميكانيك / غرفة السائق والركاب</div>' +
     '<div style="font-size:12.5px;line-height:1.6;color:' + (record.mechanicNotes ? "#16181C" : "#555") + ';">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div>" +
@@ -1400,6 +1477,14 @@ function renderBatchPrintOverlay() {
     "</div></div></div>";
 }
 
+function renderPhotoViewOverlay() {
+  if (!state.viewPhotoUrl) return "";
+  return '<div id="photo-view-overlay" data-action="close-photo-view" style="position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:80;display:flex;align-items:center;justify-content:center;padding:20px;">' +
+    '<button type="button" class="btn-icon" data-action="close-photo-view" style="position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:14px;background:rgba(255,255,255,0.12);border-radius:50%;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+    '<img src="' + state.viewPhotoUrl + '" style="max-width:100%;max-height:100%;border-radius:10px;object-fit:contain;" />' +
+    "</div>";
+}
+
 /* =================================================================
    Root render
 ================================================================= */
@@ -1417,7 +1502,7 @@ function render(preserveScroll) {
   else if (state.screen === "adminPins") html = state.adminUnlocked ? renderAdminDrivers() : renderAdminGate();
   else if (state.screen === "adminAdmins") html = state.adminUnlocked ? renderAdminAdmins() : renderAdminGate();
   else if (state.screen === "adminEditReport") html = state.adminUnlocked ? renderAdminEditReport() : renderAdminGate();
-  app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay() + renderBatchPrintOverlay();
+  app.innerHTML = '<div id="screen-root">' + html + "</div>" + renderPrintOverlay() + renderBatchPrintOverlay() + renderPhotoViewOverlay();
   applyLanguage();
   if (preserveScroll) window.scrollTo(0, scrollSave);
 }
@@ -1429,6 +1514,7 @@ function goHome() { state.screen = "home"; state.selectedId = null; render(); }
 function goBack() {
   // Mirrors whatever the visible back/close button on the current screen does,
   // so a swipe gesture always lands where the on-screen arrow would.
+  if (state.viewPhotoUrl) { state.viewPhotoUrl = null; render(); return; }
   if (state.printRecord || state.printBatch) { state.printRecord = null; state.printBatch = null; render(); return; }
   if (state.screen === "adminEditReport") { state.screen = "detail"; render(); return; }
   if (state.screen === "adminPins" || state.screen === "adminAdmins") { state.screen = "admin"; render(); return; }
@@ -1846,6 +1932,15 @@ document.addEventListener("DOMContentLoaded", function () {
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < 600) goBack();
   }, { passive: true });
 
+  var damagePhotoInput = document.getElementById("damage-photo-input");
+  damagePhotoInput.addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    var id = pendingPhotoDamageId;
+    pendingPhotoDamageId = null;
+    damagePhotoInput.value = "";
+    if (file && id) handleDamagePhotoFile(file, id);
+  });
+
   app.addEventListener("click", function (e) {
     var diagram = e.target.closest('[data-diagram="editable"]');
     if (diagram) { handleDiagramTap(diagram, e); return; }
@@ -1875,6 +1970,10 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "lookup-past") lookupPast();
     else if (action === "select-type") { activeDraft().selectedType = t.dataset.type; render(); }
     else if (action === "remove-damage") { var adRm = activeDraft(); adRm.damages = adRm.damages.filter(function (dm) { return dm.id !== t.dataset.id; }); render(); }
+    else if (action === "add-damage-photo") { pendingPhotoDamageId = t.dataset.id; document.getElementById("damage-photo-input").click(); }
+    else if (action === "remove-damage-photo") { var mp = findDamageById(t.dataset.id); if (mp) { delete mp.photo; delete mp.photoLocal; delete mp.uploading; } render(); }
+    else if (action === "view-damage-photo" && t.dataset.url) { state.viewPhotoUrl = t.dataset.url; render(); }
+    else if (action === "close-photo-view") { state.viewPhotoUrl = null; render(); }
     else if (action === "undo-damage") { undoLastDamage(); }
     else if (action === "toggle-checklist") { var adCk = activeDraft(); adCk.checklist[t.dataset.key] = !adCk.checklist[t.dataset.key]; render(); }
     else if (action === "toggle-remember-pin") { draft.rememberPin = !draft.rememberPin; render(); }
