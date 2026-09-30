@@ -492,6 +492,11 @@ var I18N_EXACT = {
   "عداد السيارة الحالي": "Current Odometer",
   "عداد السيارة": "Odometer",
   "صور الأضرار": "Damage Photos",
+  "مساعدة": "Help",
+  "عمل فحص جديد": "Doing a New Inspection",
+  "الرمز السري": "Your PIN Code",
+  "تثبيت التطبيق — أندرويد (Chrome)": "Install the App — Android (Chrome)",
+  "تثبيت التطبيق — آيفون (Safari)": "Install the App — iPhone (Safari)",
   "التاريخ والوقت": "Date & Time",
   "رمز الفاحص": "Inspector Code",
   "الفاحص": "Inspector",
@@ -989,6 +994,7 @@ function renderHome() {
     '<button type="button" class="btn-icon" data-action="go-reports" title="التقارير"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M9 17v-6M12 17v-10M15 17v-3M4 21h16"/></svg></button>' +
     '<button type="button" class="btn-icon" data-action="go-vehicles" title="المركبات"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg></button>' +
     '<button type="button" class="btn-icon" data-action="go-admin" title="لوحة الإدارة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg></button>' +
+    '<button type="button" class="btn-icon" data-action="go-help" title="مساعدة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.8-2.2 2-2.5 3.5M12 17h.01"/></svg></button>' +
     '<button type="button" class="btn-icon no-print" data-action="toggle-lang" title="En-Ar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20 15 15 0 010-20z"/></svg></button>' +
     "</div></div>" +
     cloudBanner +
@@ -1045,6 +1051,48 @@ function renderVehicles() {
 }
 
 
+
+function renderHelp() {
+  function step(n, title, body) {
+    return '<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #38383A;">' +
+      '<span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#0A84FF;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">' + n + '</span>' +
+      '<div style="font-size:13.5px;line-height:1.6;color:#FFFFFF;"><b style="display:block;">' + title + '</b><span style="color:#8E8E93;">' + body + '</span></div></div>';
+  }
+  return '<div style="padding-bottom:40px;">' +
+    '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
+    '<button type="button" class="btn-icon" data-action="go-home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">مساعدة</div></div>' +
+    '<div style="padding:0 18px;">' +
+
+    '<div class="section"><div class="section-title">عمل فحص جديد</div>' +
+    step(1, "افتح فحص جديد", "من الشاشة الرئيسية، اكبس على \"فحص جديد\"") +
+    step(2, "اكتب رمز السيارة وعداد الكيلومترات", "بيظهرلك اقتراح تلقائي إذا كانت السيارة مسجّلة قبل") +
+    step(3, "حدد المكان والوقت", "غالبًا معبّى تلقائيًا") +
+    step(4, "علّم الأضرار عالرسمة", "اختار نوع الضرر من فوق، وبعدين اكبس مكانه عالسيارة") +
+    step(5, "صوّر كل ضرر", "اكبس أيقونة الكاميرا جنب كل ضرر وصوّره مباشرة") +
+    '<div style="display:flex;gap:10px;padding:9px 0 0;"><span style="flex-shrink:0;width:22px;height:22px;"></span><div style="font-size:13.5px;line-height:1.6;color:#8E8E93;">اكتب أي ملاحظة، واكبس "حفظ الفحص". وتذكر: تقدر تسحب يمين أو يسار بأي وقت للرجوع.</div></div>' +
+    "</div>" +
+
+    '<div class="section"><div class="section-title">الرمز السري</div>' +
+    step(1, "رمز خاص فيك", "كل سائق إله رمز سري من 4 أرقام، بتاخده أول مرة من الأدمن") +
+    step(2, "تغيير الرمز", "بعد ما تدخل فيه أول مرة، بتقدر تغيّره لرمز تانية من نفس الشاشة") +
+    '<div style="display:flex;gap:10px;padding:9px 0 0;"><span style="flex-shrink:0;width:22px;height:22px;"></span><div style="font-size:13.5px;line-height:1.6;color:#8E8E93;">فعّل "تذكرني" عشان ما يطلب منك الرمز كل مرة.</div></div>' +
+    "</div>" +
+
+    '<div class="section"><div class="section-title">تثبيت التطبيق — أندرويد (Chrome)</div>' +
+    step(1, "افتح الرابط من Chrome", "") +
+    step(2, "اكبس الثلاث نقاط بأعلى الشاشة", "") +
+    step(3, "اختار \"تثبيت التطبيق\" أو \"إضافة إلى الشاشة الرئيسية\"", "وبعدين أكّد بـ\"تثبيت\" أو \"إضافة\"") +
+    "</div>" +
+
+    '<div class="section"><div class="section-title">تثبيت التطبيق — آيفون (Safari)</div>' +
+    step(1, "افتح الرابط من Safari", "لازم Safari تحديدًا، مش Chrome") +
+    step(2, "اكبس زر المشاركة", "المربع وفوقه سهم لفوق") +
+    step(3, "اختار \"إضافة إلى الشاشة الرئيسية\"", "وبعدين اكبس \"إضافة\"") +
+    "</div>" +
+
+    "</div></div>";
+}
 
 function renderReports() {
   var q = (state.reportsCarQuery || "").trim().toLowerCase();
@@ -1498,6 +1546,7 @@ function render(preserveScroll) {
   else if (state.screen === "detail") html = renderDetail();
   else if (state.screen === "vehicles") html = renderVehicles();
   else if (state.screen === "reports") html = renderReports();
+  else if (state.screen === "help") html = renderHelp();
   else if (state.screen === "admin") html = state.adminUnlocked ? renderAdminMenu() : renderAdminGate();
   else if (state.screen === "adminPins") html = state.adminUnlocked ? renderAdminDrivers() : renderAdminGate();
   else if (state.screen === "adminAdmins") html = state.adminUnlocked ? renderAdminAdmins() : renderAdminGate();
@@ -1985,6 +2034,7 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "do-print") doPrint();
     else if (action === "do-print-batch") doPrintBatch();
     else if (action === "go-admin") goAdmin();
+    else if (action === "go-help") { state.screen = "help"; render(); }
     else if (action === "go-admin-menu") { state.screen = "admin"; render(); }
     else if (action === "go-admin-pins") goAdminPins();
     else if (action === "go-admin-admins") goAdminAdmins();
