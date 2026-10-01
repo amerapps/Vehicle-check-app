@@ -85,21 +85,20 @@ var TYPE_INFO = {
   O: { label: "أخرى (Other)" }
 };
 
-var CHECKLIST_ITEMS = [
-  { key: "jack", label: "عدة الرفع" },
-  { key: "extinguisher", label: "طفاية حريق" },
-  { key: "insurance", label: "التأمين" },
-  { key: "insideMirror", label: "مرآة داخلية" },
-  { key: "radio", label: "راديو / مسجل" },
-  { key: "ashtray", label: "طفاية سجائر" },
-  { key: "toolkit", label: "عدة أدوات" },
-  { key: "firstAid", label: "إسعافات أولية" },
-  { key: "wheelCovers", label: "أغطية العجلات" },
-  { key: "clock", label: "ساعة" },
-  { key: "rightMirror", label: "مرآة يمين" },
-  { key: "lighter", label: "ولاعة" },
+var EQUIPMENT_ITEMS = [
+  { key: "liftTools", label: "أدوات الرفع" },
+  { key: "spareTire", label: "الإطار الاحتياطي" },
+  { key: "firstAid", label: "عدة الإسعاف الأولي" },
+  { key: "extinguisher", label: "طفاية الحريق" },
+  { key: "triangle", label: "المثلث العاكس" },
+  { key: "charger", label: "شاحن الكهرباء" },
+  { key: "sealant", label: "مادة مانع البنشر" },
+  { key: "flag", label: "الساريه / العلم" }
+];
+var DOCUMENT_ITEMS = [
   { key: "license", label: "الرخصة" },
-  { key: "leftMirror", label: "مرآة يسار" }
+  { key: "insurance", label: "التأمين" },
+  { key: "drivingPermit", label: "تصريح القيادة" }
 ];
 
 // place options — fixed list as requested
@@ -247,7 +246,7 @@ function initCloud() {
           idx.push({
             id: doc.id, carCode: rec.carCode, driver: rec.driver, place: rec.place,
             dateTime: rec.dateTime, damageCount: (rec.damages || []).length,
-            badgeColor: badgeColorFor(rec.damages || [])
+            badgeColor: badgeColorFor(rec.damages || []), odometer: rec.odometer
           });
         });
         inspectionsCache = cache;
@@ -441,9 +440,9 @@ function findNearMark(damages, xFrac, yFrac) {
   }
   return best;
 }
-function emptyChecklist() {
+function emptyChecklistFor(items) {
   var o = {};
-  CHECKLIST_ITEMS.forEach(function (i) { o[i.key] = false; });
+  items.forEach(function (i) { o[i.key] = false; });
   return o;
 }
 function badgeColorFor(damages) {
@@ -474,6 +473,12 @@ var I18N_EXACT = {
   "ملاحظات على الميكانيك / غرفة السائق والركاب": "Notes on mechanics / driver & passenger cabin",
   "ملاحظات على الميكانيك أو غرفة السائق والركاب": "Notes on mechanics or driver & passenger cabin",
   "التجهيزات": "Equipment",
+  "الوثائق": "Documents",
+  "استخراج تقارير حسب الفترة": "Export Reports by Date Range",
+  "من تاريخ": "From Date",
+  "إلى تاريخ": "To Date",
+  "استخراج وطباعة التقارير": "Export & Print Reports",
+  "لا توجد فحوصات بهذه الفترة": "No inspections in this date range",
   "هوية الفاحص": "Inspector Identity",
   "منطقة الخطر": "Danger Zone",
   "إضافة مركبة جديدة": "Add New Vehicle",
@@ -598,20 +603,17 @@ var I18N_EXACT = {
   "خدش (Scratch)": "Scratch",
   "مكسور (Broken)": "Broken",
   "أخرى (Other)": "Other",
-  "عدة الرفع": "Jack",
-  "طفاية حريق": "Fire Extinguisher",
-  "التأمين": "Insurance",
-  "مرآة داخلية": "Inside Mirror",
-  "راديو / مسجل": "Radio / Player",
-  "طفاية سجائر": "Ashtray",
-  "عدة أدوات": "Toolkit",
-  "إسعافات أولية": "First Aid Kit",
-  "أغطية العجلات": "Wheel Covers",
-  "ساعة": "Clock",
-  "مرآة يمين": "Right Mirror",
-  "ولاعة": "Lighter",
+  "أدوات الرفع": "Lift Tools",
+  "الإطار الاحتياطي": "Spare Tire",
+  "عدة الإسعاف الأولي": "First Aid Kit",
+  "طفاية الحريق": "Fire Extinguisher",
+  "المثلث العاكس": "Reflective Triangle",
+  "شاحن الكهرباء": "Electric Charger",
+  "مادة مانع البنشر": "Tire Sealant",
+  "الساريه / العلم": "Flagpole / Flag",
   "الرخصة": "License",
-  "مرآة يسار": "Left Mirror",
+  "التأمين": "Insurance",
+  "تصريح القيادة": "Driving Permit",
   "المقدمة (FRT) - الجانب الأيمن (R/H)": "Front (FRT) - Right Side (R/H)",
   "المقدمة (FRT) - الجانب الأيسر (L/H)": "Front (FRT) - Left Side (L/H)",
   "المؤخرة (RR) - الجانب الأيمن (R/H)": "Rear (RR) - Right Side (R/H)",
@@ -709,6 +711,9 @@ var state = {
   vehicleError: "",
   reportsCarQuery: "",
   reportsDriverFilter: "",
+  reportsDateFrom: "",
+  reportsDateTo: "",
+  reportsRangeError: "",
   detailDeleteOpen: false,
   detailDeletePinTry: "",
   detailDeleteError: "",
@@ -745,8 +750,10 @@ function freshDraft() {
     damages: [],
     selectedType: "D",
     mechanicNotes: "",
-    checklist: emptyChecklist(),
-    otherText: "",
+    equipment: emptyChecklistFor(EQUIPMENT_ITEMS),
+    equipmentOtherText: "",
+    documents: emptyChecklistFor(DOCUMENT_ITEMS),
+    documentOtherText: "",
     pastInspections: null,
     pastLoading: false,
     errorMsg: "",
@@ -873,9 +880,13 @@ function renderReport(record) {
       '<div style="font-size:12.5px;font-weight:600;line-height:1.45;">' + escapeHtml(value || "—") + "</div></div>";
   }
 
-  var checklistHtml = '<div class="vi-checklist" style="display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;">' + CHECKLIST_ITEMS.map(function (item) {
-    return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.5;"><span style="flex-shrink:0;">' + ((record.checklist || {})[item.key] ? "✔" : "✕") + "</span><span>" + item.label + "</span></div>";
-  }).join("") + "</div>";
+  function buildChecklistHtml(record2, items, key) {
+    return '<div class="vi-checklist" style="display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;">' + items.map(function (item) {
+      return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.5;"><span style="flex-shrink:0;">' + ((record2[key] || {})[item.key] ? "✔" : "✕") + "</span><span>" + item.label + "</span></div>";
+    }).join("") + "</div>";
+  }
+  var equipmentHtml = buildChecklistHtml(record, EQUIPMENT_ITEMS, "equipment");
+  var documentsHtml = buildChecklistHtml(record, DOCUMENT_ITEMS, "documents");
 
   var placeLine = record.place + (record.placeNote ? " — " + escapeHtml(record.placeNote) : "");
 
@@ -912,8 +923,11 @@ function renderReport(record) {
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">ملاحظات على الميكانيك / غرفة السائق والركاب</div>' +
     '<div style="font-size:12.5px;line-height:1.6;color:' + (record.mechanicNotes ? "#16181C" : "#555") + ';">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div>" +
 
-    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">التجهيزات</div>' + checklistHtml +
-    (record.otherText ? '<div style="margin-top:8px;font-size:12px;line-height:1.5;">أخرى: ' + escapeHtml(record.otherText) + "</div>" : "") +
+    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">التجهيزات</div>' + equipmentHtml +
+    (record.equipmentOtherText ? '<div style="margin-top:8px;font-size:12px;line-height:1.5;">أخرى: ' + escapeHtml(record.equipmentOtherText) + "</div>" : "") +
+
+    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">الوثائق</div>' + documentsHtml +
+    (record.documentOtherText ? '<div style="margin-top:8px;font-size:12px;line-height:1.5;">أخرى: ' + escapeHtml(record.documentOtherText) + "</div>" : "") +
 
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">هوية الفاحص</div>' +
     '<div style="font-size:12px;line-height:1.55;">✔ تم تأكيد الهوية عبر الرمز الشخصي لـ <b>' + escapeHtml(record.driver || "—") + '</b><div style="color:#555;margin-top:3px;">بتاريخ: ' + formatDateOnly(record.driverConfirmedAt) + ' — الوقت: ' + formatTimeOnly(record.driverConfirmedAt) + "</div></div>" +
@@ -942,6 +956,29 @@ function openBatchPrint(dateISO) {
   var records = getInspectionsForDate(dateISO);
   if (records.length === 0) return;
   state.printBatch = { date: dateISO, records: records };
+  render();
+}
+
+function getInspectionsForRange(fromISO, toISO) {
+  if (!fromISO || !toISO) return [];
+  function pad(n) { return String(n).padStart(2, "0"); }
+  var matches = inspectionsIndex.filter(function (it) {
+    var d = it.dateTime ? new Date(it.dateTime) : null;
+    if (!d || isNaN(d.getTime())) return false;
+    var isoDate = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    return isoDate >= fromISO && isoDate <= toISO;
+  });
+  return matches
+    .map(function (it) { return inspectionsCache[it.id]; })
+    .filter(Boolean)
+    .sort(function (a, b) { return new Date(a.dateTime) - new Date(b.dateTime); });
+}
+
+function openBatchPrintRange(fromISO, toISO) {
+  var records = getInspectionsForRange(fromISO, toISO);
+  if (records.length === 0) { state.reportsRangeError = "لا توجد فحوصات بهذه الفترة"; render(); return; }
+  state.reportsRangeError = "";
+  state.printBatch = { date: fromISO, label: "فحوصات من " + formatDateOnly(fromISO) + " إلى " + formatDateOnly(toISO), records: records };
   render();
 }
 
@@ -1135,6 +1172,17 @@ function renderReports() {
     "</div>" +
 
     (state.adminUnlocked
+      ? '<div class="section"><div class="section-title">استخراج تقارير حسب الفترة</div>' +
+        '<div style="display:flex;gap:10px;">' +
+        '<div style="flex:1;"><label class="label">من تاريخ</label><input class="input" type="date" data-field="reportsDateFrom" value="' + escapeHtml(state.reportsDateFrom) + '" /></div>' +
+        '<div style="flex:1;"><label class="label">إلى تاريخ</label><input class="input" type="date" data-field="reportsDateTo" value="' + escapeHtml(state.reportsDateTo) + '" /></div>' +
+        "</div>" +
+        (state.reportsRangeError ? '<div style="color:#FF453A;font-size:12px;margin-top:8px;">' + escapeHtml(state.reportsRangeError) + "</div>" : "") +
+        '<button type="button" class="btn-primary" data-action="print-range" style="width:100%;margin-top:12px;opacity:' + (state.reportsDateFrom && state.reportsDateTo ? "1" : "0.45") + ';" ' + (state.reportsDateFrom && state.reportsDateTo ? "" : "disabled") + '>استخراج وطباعة التقارير</button>' +
+        "</div>"
+      : "") +
+
+    (state.adminUnlocked
       ? '<div class="section"><div class="section-title">حسب الفاحص</div>' +
         '<div style="display:flex;flex-direction:column;">' +
         driverList.map(function (d) {
@@ -1232,13 +1280,24 @@ function renderInspectionFields(d) {
 
     '<div class="section"><div class="section-title">التجهيزات</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
-    CHECKLIST_ITEMS.map(function (item) {
-      var on = d.checklist[item.key];
-      return '<div style="display:flex;align-items:center;gap:8px;cursor:pointer;" data-action="toggle-checklist" data-key="' + item.key + '">' +
+    EQUIPMENT_ITEMS.map(function (item) {
+      var on = d.equipment[item.key];
+      return '<div style="display:flex;align-items:center;gap:8px;cursor:pointer;" data-action="toggle-checklist" data-group="equipment" data-key="' + item.key + '">' +
         '<span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
         '<span style="font-size:13px;color:#FFFFFF;">' + item.label + "</span></div>";
     }).join("") + "</div>" +
-    '<div style="margin-top:10px;"><label class="label">أخرى</label><input class="input" data-field="otherText" list="dl-otherText" placeholder="بند إضافي" value="' + escapeHtml(d.otherText) + '" />' + datalistHtml("dl-otherText", "otherText") + "</div>" +
+    '<div style="margin-top:10px;"><label class="label">أخرى</label><input class="input" data-field="equipmentOtherText" list="dl-equipmentOtherText" placeholder="بند إضافي" value="' + escapeHtml(d.equipmentOtherText) + '" />' + datalistHtml("dl-equipmentOtherText", "equipmentOtherText") + "</div>" +
+    "</div>" +
+
+    '<div class="section"><div class="section-title">الوثائق</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+    DOCUMENT_ITEMS.map(function (item) {
+      var on = d.documents[item.key];
+      return '<div style="display:flex;align-items:center;gap:8px;cursor:pointer;" data-action="toggle-checklist" data-group="documents" data-key="' + item.key + '">' +
+        '<span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
+        '<span style="font-size:13px;color:#FFFFFF;">' + item.label + "</span></div>";
+    }).join("") + "</div>" +
+    '<div style="margin-top:10px;"><label class="label">أخرى</label><input class="input" data-field="documentOtherText" list="dl-documentOtherText" placeholder="بند إضافي" value="' + escapeHtml(d.documentOtherText) + '" />' + datalistHtml("dl-documentOtherText", "documentOtherText") + "</div>" +
     "</div>" +
 
     (d.errorMsg ? '<div style="color:#FF453A;font-size:13px;text-align:center;margin-bottom:10px;">' + escapeHtml(d.errorMsg) + "</div>" : "");
@@ -1304,10 +1363,14 @@ function renderDetail() {
     return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #2C2C2E;"><span style="color:#8E8E93;font-size:12px;">' + label + '</span><span style="color:#FFFFFF;font-size:13px;">' + escapeHtml(value || "—") + "</span></div>";
   }
 
-  var checklistHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + CHECKLIST_ITEMS.map(function (item) {
-    var on = (record.checklist || {})[item.key];
-    return '<div style="display:flex;align-items:center;gap:8px;"><span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + '</span><span style="font-size:13px;color:#FFFFFF;">' + item.label + "</span></div>";
-  }).join("") + "</div>";
+  function buildChecklistHtml2(items, key) {
+    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + items.map(function (item) {
+      var on = (record[key] || {})[item.key];
+      return '<div style="display:flex;align-items:center;gap:8px;"><span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + '</span><span style="font-size:13px;color:#FFFFFF;">' + item.label + "</span></div>";
+    }).join("") + "</div>";
+  }
+  var equipmentHtml2 = buildChecklistHtml2(EQUIPMENT_ITEMS, "equipment");
+  var documentsHtml2 = buildChecklistHtml2(DOCUMENT_ITEMS, "documents");
 
   var placeLine = record.place + (record.placeNote ? " — " + escapeHtml(record.placeNote) : "");
 
@@ -1328,7 +1391,8 @@ function renderDetail() {
     '<div class="section"><div class="section-title">بيانات الفحص</div>' + row("رمز السيارة", record.carCode) + row("عداد السيارة", record.odometer) + row("الفاحص", record.driver) + row("المكان", placeLine) + row("التاريخ والوقت", formatDT(record.dateTime)) + "</div>" +
     '<div class="section"><div class="section-title">حالة الهيكل</div>' + renderLegend() + renderCarDiagram(damages, { editable: false, theme: "dark" }) + damagesHtml + "</div>" +
     '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div><div style="color:' + (record.mechanicNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div></div>" +
-    '<div class="section"><div class="section-title">التجهيزات</div>' + checklistHtml + (record.otherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.otherText) + "</div>" : "") + "</div>" +
+    '<div class="section"><div class="section-title">التجهيزات</div>' + equipmentHtml2 + (record.equipmentOtherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.equipmentOtherText) + "</div>" : "") + "</div>" +
+    '<div class="section"><div class="section-title">الوثائق</div>' + documentsHtml2 + (record.documentOtherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.documentOtherText) + "</div>" : "") + "</div>" +
     '<div class="section"><div class="section-title">هوية الفاحص</div>' + row("الفاحص", record.driver) +
     '<div style="display:flex;align-items:center;gap:6px;color:#0A84FF;font-size:13px;margin-top:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> تم تأكيد الهوية عبر الرمز الشخصي بتاريخ ' + formatDT(record.driverConfirmedAt) + "</div></div>" +
     renderDeleteReportSection(record) +
@@ -1336,26 +1400,11 @@ function renderDetail() {
 }
 
 function renderDeleteReportSection(record) {
-  if (state.adminUnlocked) {
-    return '<div class="section"><div class="section-title">منطقة الخطر</div>' +
-      '<button type="button" class="btn-danger" data-action="admin-delete-report" data-id="' + record.id + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;">' +
-      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>' +
-      'حذف هذا الفحص</button></div>';
-  }
-  var openHtml = "";
-  if (state.detailDeleteOpen) {
-    openHtml = '<div style="margin-top:10px;">' +
-      '<label class="label">أدخل رمزك السري لتأكيد حذف هذا الفحص (يجب أن تكون أنت الفاحص صاحب هذا الفحص)</label>' +
-      '<input class="input" data-field="detailDeletePinTry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="رمزك المكوّن من 4 أرقام" value="' + escapeHtml(state.detailDeletePinTry) + '" />' +
-      (state.detailDeleteError ? '<div style="color:#FF453A;font-size:11.5px;margin-top:6px;">' + escapeHtml(state.detailDeleteError) + "</div>" : "") +
-      '<button type="button" data-action="toggle-own-delete" style="background:none;border:none;color:#636366;font-size:11.5px;text-decoration:underline;margin-top:8px;">إلغاء</button>' +
-      "</div>";
-  }
+  if (!state.adminUnlocked) return "";
   return '<div class="section"><div class="section-title">منطقة الخطر</div>' +
-    (state.detailDeleteOpen ? "" : '<button type="button" class="btn-danger" data-action="toggle-own-delete" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;">' +
-      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>' +
-      'حذف الفحص (كفاحص صاحب الفحص)</button>') +
-    openHtml + "</div>";
+    '<button type="button" class="btn-danger" data-action="admin-delete-report" data-id="' + record.id + '" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>' +
+    'حذف هذا الفحص</button></div>';
 }
 
 /* =================================================================
@@ -1515,7 +1564,7 @@ function renderBatchPrintOverlay() {
   return '<div id="print-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
     '<div style="width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
     '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #38383A;">' +
-    '<div style="color:#FFFFFF;font-size:15px;font-weight:700;">فحوصات يوم ' + formatDateOnly(batch.date) + " (" + batch.records.length + ")</div>" +
+    '<div style="color:#FFFFFF;font-size:15px;font-weight:700;">' + (batch.label || ("فحوصات يوم " + formatDateOnly(batch.date))) + " (" + batch.records.length + ")</div>" +
     '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
     '<div class="print-scrollwrap" style="overflow-y:auto;padding:14px;"><div id="print-area">' + reportsHtml + "</div></div>" +
     '<div class="no-print" style="padding:14px;border-top:1px solid #38383A;">' +
@@ -1590,7 +1639,7 @@ function openDetail(id) {
   render();
 }
 function goVehicles() { state.newVehicleCode = ""; state.vehicleError = ""; state.screen = "vehicles"; render(); }
-function goReports() { state.reportsCarQuery = ""; state.reportsDriverFilter = ""; state.screen = "reports"; render(); }
+function goReports() { state.reportsCarQuery = ""; state.reportsDriverFilter = ""; state.reportsDateFrom = ""; state.reportsDateTo = ""; state.reportsRangeError = ""; state.screen = "reports"; render(); }
 
 /* -------------------- Admin -------------------- */
 function goAdmin() {
@@ -1679,8 +1728,10 @@ function loadAdminEditDraft(record) {
     damages: (record.damages || []).map(function (m) { return Object.assign({}, m); }),
     selectedType: "D",
     mechanicNotes: record.mechanicNotes || "",
-    checklist: Object.assign(emptyChecklist(), record.checklist || {}),
-    otherText: record.otherText || "",
+    equipment: Object.assign(emptyChecklistFor(EQUIPMENT_ITEMS), record.equipment || {}),
+    equipmentOtherText: record.equipmentOtherText || "",
+    documents: Object.assign(emptyChecklistFor(DOCUMENT_ITEMS), record.documents || {}),
+    documentOtherText: record.documentOtherText || "",
     errorMsg: "",
     saving: false
   };
@@ -1699,6 +1750,15 @@ function saveAdminEditReport() {
   if (!d) return;
   if (!d.carCode.trim()) { d.errorMsg = "الرجاء إدخال رمز السيارة"; render(); return; }
   if (!db) { d.errorMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; render(); return; }
+  var prevMaxOdoEdit = getMaxOdometerForCar(d.carCode, d.id);
+  if ((d.odometer || "").trim() && prevMaxOdoEdit !== null) {
+    var curOdoEdit = parseInt(d.odometer, 10);
+    if (!isNaN(curOdoEdit) && curOdoEdit < prevMaxOdoEdit) {
+      d.errorMsg = "عداد السيارة (" + d.odometer.trim() + ") أقل من آخر عداد مسجّل لهذه السيارة (" + prevMaxOdoEdit + "). تأكد من الرقم.";
+      render();
+      return;
+    }
+  }
   d.errorMsg = "";
   d.saving = true;
   render();
@@ -1710,8 +1770,10 @@ function saveAdminEditReport() {
     dateTime: d.dateTime,
     damages: d.damages,
     mechanicNotes: d.mechanicNotes.trim(),
-    checklist: d.checklist,
-    otherText: d.otherText.trim(),
+    equipment: d.equipment,
+    equipmentOtherText: d.equipmentOtherText.trim(),
+    documents: d.documents,
+    documentOtherText: d.documentOtherText.trim(),
     editedByAdmin: state.adminName || "",
     editedAt: nowIso()
   };
@@ -1735,30 +1797,6 @@ function adminDeleteReport(id) {
   }).catch(function (e) {
     console.error("delete failed", e);
     window.alert(tr("تعذّر حذف الفحص: تحقق من الإنترنت وحاول مرة أخرى"));
-  });
-}
-
-function checkOwnDeletePin() {
-  var record = inspectionsCache[state.selectedId];
-  if (!record) return;
-  var entered = state.detailDeletePinTry.trim();
-  if (!/^[0-9]{4}$/.test(entered)) return;
-  hashPin(entered).then(function (hash) {
-    if (record.driver && driverPinsCache[record.driver] === hash) {
-      if (!db) { state.detailDeleteError = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.detailDeletePinTry = ""; render(); return; }
-      db.collection("inspections").doc(record.id).delete().then(function () {
-        goHome();
-      }).catch(function (e) {
-        console.error("delete failed", e);
-        state.detailDeleteError = "تعذّر حذف الفحص: تحقق من الإنترنت وحاول مرة أخرى";
-        state.detailDeletePinTry = "";
-        render();
-      });
-    } else {
-      state.detailDeleteError = "رمز غير صحيح";
-      state.detailDeletePinTry = "";
-      render();
-    }
   });
 }
 
@@ -1825,15 +1863,39 @@ function buildRecord() {
     dateTime: draft.dateTime,
     damages: draft.damages,
     mechanicNotes: draft.mechanicNotes.trim(),
-    checklist: draft.checklist,
-    otherText: draft.otherText.trim()
+    equipment: draft.equipment,
+    equipmentOtherText: draft.equipmentOtherText.trim(),
+    documents: draft.documents,
+    documentOtherText: draft.documentOtherText.trim()
   };
+}
+
+function getMaxOdometerForCar(carCode, excludeId) {
+  var code = (carCode || "").trim().toLowerCase();
+  if (!code) return null;
+  var max = null;
+  inspectionsIndex.forEach(function (it) {
+    if (excludeId && it.id === excludeId) return;
+    if ((it.carCode || "").trim().toLowerCase() !== code) return;
+    var n = parseInt(it.odometer, 10);
+    if (!isNaN(n) && (max === null || n > max)) max = n;
+  });
+  return max;
 }
 
 function saveInspection() {
   if (!draft.carCode.trim()) { draft.errorMsg = "الرجاء إدخال رمز السيارة"; render(); return; }
   if (!draft.pinVerified || !draft.driver) { draft.errorMsg = "الرجاء إدخال رمز الفاحص الصحيح أولاً"; render(); return; }
   if (!db) { draft.errorMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا — تحقق من الإنترنت وحاول مرة أخرى"; render(); return; }
+  var prevMaxOdo = getMaxOdometerForCar(draft.carCode);
+  if (draft.odometer.trim() && prevMaxOdo !== null) {
+    var curOdo = parseInt(draft.odometer, 10);
+    if (!isNaN(curOdo) && curOdo < prevMaxOdo) {
+      draft.errorMsg = "عداد السيارة (" + draft.odometer.trim() + ") أقل من آخر عداد مسجّل لهذه السيارة (" + prevMaxOdo + "). تأكد من الرقم.";
+      render();
+      return;
+    }
+  }
 
   draft.errorMsg = "";
   draft.saving = true;
@@ -1845,7 +1907,8 @@ function saveInspection() {
   db.collection("inspections").doc(id).set(record).then(function () {
     // remember what was typed, for the "smart" fields next time
     pushHistory("placeNote", record.placeNote);
-    pushHistory("otherText", record.otherText);
+    pushHistory("equipmentOtherText", record.equipmentOtherText);
+    pushHistory("documentOtherText", record.documentOtherText);
 
     draft.saving = false;
     goHome();
@@ -2011,6 +2074,7 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "go-vehicles") goVehicles();
     else if (action === "go-reports") goReports();
     else if (action === "filter-by-driver") { state.reportsDriverFilter = state.reportsDriverFilter === t.dataset.driver ? "" : t.dataset.driver; render(); }
+    else if (action === "print-range") { if (state.reportsDateFrom && state.reportsDateTo) openBatchPrintRange(state.reportsDateFrom, state.reportsDateTo); }
     else if (action === "clear-home-date") { state.homeDate = ""; render(); }
     else if (action === "print-day") openBatchPrint(state.homeDate);
     else if (action === "add-vehicle") handleAddVehicle();
@@ -2024,7 +2088,7 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "view-damage-photo" && t.dataset.url) { state.viewPhotoUrl = t.dataset.url; render(); }
     else if (action === "close-photo-view") { state.viewPhotoUrl = null; render(); }
     else if (action === "undo-damage") { undoLastDamage(); }
-    else if (action === "toggle-checklist") { var adCk = activeDraft(); adCk.checklist[t.dataset.key] = !adCk.checklist[t.dataset.key]; render(); }
+    else if (action === "toggle-checklist") { var adCk = activeDraft()[t.dataset.group]; adCk[t.dataset.key] = !adCk[t.dataset.key]; render(); }
     else if (action === "toggle-remember-pin") { draft.rememberPin = !draft.rememberPin; render(); }
     else if (action === "save-inspection") saveInspection();
     else if (action === "reset-pin-check") { draft.driver = ""; draft.pinVerified = false; draft.pinError = ""; draft.pinTry = ""; render(); }
@@ -2048,7 +2112,6 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "admin-cancel-edit") { state.screen = "detail"; render(); }
     else if (action === "admin-save-report") saveAdminEditReport();
     else if (action === "admin-delete-report") adminDeleteReport(t.dataset.id);
-    else if (action === "toggle-own-delete") { state.detailDeleteOpen = !state.detailDeleteOpen; state.detailDeletePinTry = ""; state.detailDeleteError = ""; render(); }
     else if (action === "toggle-change-pin") { draft.changePinOpen = !draft.changePinOpen; draft.newPin = ""; draft.changePinMsg = ""; render(); }
     else if (action === "save-own-pin") saveOwnDriverPin();
     else if (action === "toggle-admin-self-pin") { state.adminSelfPinOpen = !state.adminSelfPinOpen; state.adminSelfNewPin = ""; state.adminSelfPinMsg = ""; render(); }
@@ -2083,6 +2146,8 @@ document.addEventListener("DOMContentLoaded", function () {
     var field = t.dataset.field;
     if (!field) return;
     if (field === "homeDate") { state.homeDate = t.value; render(); return; }
+    if (field === "reportsDateFrom") { state.reportsDateFrom = t.value; state.reportsRangeError = ""; render(); return; }
+    if (field === "reportsDateTo") { state.reportsDateTo = t.value; state.reportsRangeError = ""; render(); return; }
     if (field === "newVehicleCode") { t.value = t.value.replace(/[^0-9]/g, ""); state.newVehicleCode = t.value; return; }
     if (field === "carCode") { t.value = t.value.replace(/[^0-9]/g, ""); activeDraft().carCode = t.value; return; }
     if (field === "odometer") { t.value = t.value.replace(/[^0-9]/g, ""); activeDraft().odometer = t.value; return; }
@@ -2101,13 +2166,6 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
     if (field === "adminNewPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminNewPin = t.value; return; }
-    if (field === "detailDeletePinTry") {
-      t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4);
-      state.detailDeletePinTry = t.value;
-      state.detailDeleteError = "";
-      if (t.value.length === 4) checkOwnDeletePin();
-      return;
-    }
     if (field === "newPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); draft.newPin = t.value; draft.changePinMsg = ""; return; }
     if (field === "adminSelfNewPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminSelfNewPin = t.value; state.adminSelfPinMsg = ""; return; }
     if (field === "adminNewAdminName") { state.adminNewAdminName = t.value; return; }
