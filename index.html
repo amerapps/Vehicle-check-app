@@ -486,7 +486,8 @@ var I18N_EXACT = {
   "طباعة حسب رقم السيارة": "Print by Car Code",
   "الأدمنز": "Admins",
   "إضافة أدمن جديد": "Add New Admin",
-  "تغيير رموز الفاحصين": "Change Inspector Codes",
+  "الفاحصون": "Inspectors",
+  "إضافة فاحص، تعديل اسمه أو رمزه، أو حذفه": "Add an inspector, edit their name or code, or remove them",
   "رمز الأدمن": "Admin Code",
   "تعديل الفحص (إدارة)": "Edit Inspection (Admin)",
   "معاينة التقرير": "Report Preview",
@@ -499,7 +500,35 @@ var I18N_EXACT = {
   "صور الأضرار": "Damage Photos",
   "مساعدة": "Help",
   "عمل فحص جديد": "Doing a New Inspection",
+  "ملاحظات على الإطارات": "Tire Notes",
+  "أي ملاحظات عن الإطارات (نوع، حالة، ضغط هواء، تآكل...)": "Any notes about the tires (type, condition, air pressure, wear...)",
   "الرمز السري": "Your PIN Code",
+  "افتح فحص جديد": "Open a new inspection",
+  "من الشاشة الرئيسية، اكبس على \"فحص جديد\"": "From the home screen, tap \"New Inspection\"",
+  "اكتب رمز السيارة وعداد الكيلومترات": "Enter the car code and current odometer",
+  "بيظهرلك اقتراح تلقائي إذا كانت السيارة مسجّلة قبل": "You'll see an automatic suggestion if the car was registered before",
+  "حدد المكان والوقت": "Set the place and time",
+  "غالبًا معبّى تلقائيًا": "Usually filled in automatically",
+  "علّم الأضرار عالرسمة": "Mark damage on the diagram",
+  "اختار نوع الضرر من فوق، وبعدين اكبس مكانه عالسيارة": "Choose the damage type above, then tap its spot on the car",
+  "صوّر كل ضرر": "Photograph each damage",
+  "اكبس أيقونة الكاميرا جنب كل ضرر وصوّره مباشرة": "Tap the camera icon next to each damage and photograph it directly",
+  "اكتب أي ملاحظة، واكبس \"حفظ الفحص\". وتذكر: تقدر تسحب يمين أو يسار بأي وقت للرجوع.": "Write any note, then tap \"Save Inspection\". Remember: you can swipe right or left anytime to go back.",
+  "رمز خاص فيك": "Your personal code",
+  "كل سائق إله رمز سري من 4 أرقام، بتاخده أول مرة من الأدمن": "Every driver has a secret 4-digit code, given to you by the admin the first time",
+  "تغيير الرمز": "Changing your code",
+  "بعد ما تدخل فيه أول مرة، بتقدر تغيّره لرمز تانية من نفس الشاشة": "After entering it the first time, you can change it to a new code from the same screen",
+  "فعّل \"تذكرني\" عشان ما يطلب منك الرمز كل مرة.": "Turn on \"Remember me\" so it doesn't ask for your code every time.",
+  "افتح الرابط من Chrome": "Open the link in Chrome",
+  "اكبس الثلاث نقاط بأعلى الشاشة": "Tap the three dots at the top of the screen",
+  "اختار \"تثبيت التطبيق\" أو \"إضافة إلى الشاشة الرئيسية\"": "Choose \"Install app\" or \"Add to Home screen\"",
+  "وبعدين أكّد بـ\"تثبيت\" أو \"إضافة\"": "Then confirm with \"Install\" or \"Add\"",
+  "افتح الرابط من Safari": "Open the link in Safari",
+  "لازم Safari تحديدًا، مش Chrome": "Must be Safari specifically, not Chrome",
+  "اكبس زر المشاركة": "Tap the Share button",
+  "المربع وفوقه سهم لفوق": "The square with an arrow pointing up",
+  "اختار \"إضافة إلى الشاشة الرئيسية\"": "Choose \"Add to Home Screen\"",
+  "وبعدين اكبس \"إضافة\"": "Then tap \"Add\"",
   "تثبيت التطبيق — أندرويد (Chrome)": "Install the App — Android (Chrome)",
   "تثبيت التطبيق — آيفون (Safari)": "Install the App — iPhone (Safari)",
   "التاريخ والوقت": "Date & Time",
@@ -574,6 +603,15 @@ var I18N_EXACT = {
   "تعذّر الحفظ: تحقق من الإنترنت وحاول مرة أخرى": "Could not save: check your internet and try again",
   "تعذّر حذف الفحص: تحقق من الإنترنت وحاول مرة أخرى": "Could not delete the inspection: check your internet and try again",
   "تم تحديث الرمز بنجاح": "Code updated successfully",
+  "تم الحفظ بنجاح": "Saved successfully",
+  "إضافة فاحص جديد": "Add New Inspector",
+  "اسم الفاحص الجديد": "New inspector name",
+  "حذف هذا الفاحص": "Delete this inspector",
+  "هذا الاسم مستخدم مسبقًا": "This name is already in use",
+  "هذا الاسم موجود مسبقًا بين الفاحصين": "This name already exists among inspectors",
+  "تمت إضافة الفاحص بنجاح": "Inspector added successfully",
+  "هذا الرمز مستخدم من قبل فاحص آخر — اختر رمزًا مختلفًا": "This code is used by another inspector — choose a different one",
+  "رمز جديد (اتركه فارغًا لعدم التغيير)": "New code (leave empty to keep unchanged)",
   "تم تغيير رمزك بنجاح": "Your code was changed successfully",
   "تمت إضافة الأدمن بنجاح": "Admin added successfully",
   "هذا الرمز مستخدم من قبل فاحص آخر — اختر رمزًا مختلفًا": "This code is already used by another inspector — choose a different one",
@@ -726,6 +764,11 @@ var state = {
   adminPinTry: "",
   adminPinError: "",
   adminEditDriverName: null,
+  adminEditDriverNewName: "",
+  adminNewDriverName: "",
+  adminNewDriverPin: "",
+  adminDriverAddMsg: "",
+  adminDriverAddMsgOk: false,
   adminEditAdminName: null,
   adminNewPin: "",
   adminPinMsg: "",
@@ -749,6 +792,7 @@ function freshDraft() {
     dateTime: nowDateTimeLocal(),
     damages: [],
     selectedType: "D",
+    tireNotes: "",
     mechanicNotes: "",
     equipment: emptyChecklistFor(EQUIPMENT_ITEMS),
     equipmentOtherText: "",
@@ -919,6 +963,9 @@ function renderReport(record) {
     '<div style="margin:10px 0;border:1px solid #eee;border-radius:10px;padding:8px;">' + renderCarDiagram(damages, { editable: false, theme: "light", size: 250 }) + "</div>" +
     damagesHtml +
     photosHtml +
+
+    '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">ملاحظات على الإطارات</div>' +
+    '<div style="font-size:12.5px;line-height:1.6;color:' + (record.tireNotes ? "#16181C" : "#555") + ';">' + escapeHtml(record.tireNotes || "لا توجد ملاحظات") + "</div>" +
 
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">ملاحظات على الميكانيك / غرفة السائق والركاب</div>' +
     '<div style="font-size:12.5px;line-height:1.6;color:' + (record.mechanicNotes ? "#16181C" : "#555") + ';">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div>" +
@@ -1138,9 +1185,9 @@ function renderReports() {
     : [];
 
   var driverCounts = {};
-  DRIVERS.forEach(function (d) { driverCounts[d] = 0; });
+  Object.keys(driverPinsCache).forEach(function (d) { driverCounts[d] = 0; });
   inspectionsIndex.forEach(function (it) { if (it.driver) driverCounts[it.driver] = (driverCounts[it.driver] || 0) + 1; });
-  var driverList = DRIVERS.slice().sort(function (a, b) { return (driverCounts[b] || 0) - (driverCounts[a] || 0); });
+  var driverList = Object.keys(driverPinsCache).sort(function (a, b) { return (driverCounts[b] || 0) - (driverCounts[a] || 0); });
 
   var filterDriver = state.reportsDriverFilter;
   var driverMatches = filterDriver ? inspectionsIndex.filter(function (it) { return it.driver === filterDriver; }) : [];
@@ -1275,6 +1322,9 @@ function renderInspectionFields(d) {
     damagesListHtml +
     "</div>" +
 
+    '<div class="section"><div class="section-title">ملاحظات على الإطارات</div>' +
+    '<textarea class="input" data-field="tireNotes" rows="3" style="resize:none;" placeholder="أي ملاحظات عن الإطارات (نوع، حالة، ضغط هواء، تآكل...)">' + escapeHtml(d.tireNotes) + "</textarea></div>" +
+
     '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div>' +
     '<textarea class="input" data-field="mechanicNotes" rows="3" style="resize:none;" placeholder="أي ملاحظات ميكانيكية، أو داخل المقصورة (مقاعد، ديكور، رائحة، أعطال...)">' + escapeHtml(d.mechanicNotes) + "</textarea></div>" +
 
@@ -1390,6 +1440,7 @@ function renderDetail() {
     '<div style="padding:0 18px;">' +
     '<div class="section"><div class="section-title">بيانات الفحص</div>' + row("رمز السيارة", record.carCode) + row("عداد السيارة", record.odometer) + row("الفاحص", record.driver) + row("المكان", placeLine) + row("التاريخ والوقت", formatDT(record.dateTime)) + "</div>" +
     '<div class="section"><div class="section-title">حالة الهيكل</div>' + renderLegend() + renderCarDiagram(damages, { editable: false, theme: "dark" }) + damagesHtml + "</div>" +
+    '<div class="section"><div class="section-title">ملاحظات على الإطارات</div><div style="color:' + (record.tireNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.tireNotes || "لا توجد ملاحظات") + "</div></div>" +
     '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div><div style="color:' + (record.mechanicNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div></div>" +
     '<div class="section"><div class="section-title">التجهيزات</div>' + equipmentHtml2 + (record.equipmentOtherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.equipmentOtherText) + "</div>" : "") + "</div>" +
     '<div class="section"><div class="section-title">الوثائق</div>' + documentsHtml2 + (record.documentOtherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.documentOtherText) + "</div>" : "") + "</div>" +
@@ -1433,7 +1484,7 @@ function renderAdminMenu() {
     '<div style="color:#8E8E93;font-size:12px;margin-bottom:12px;">مسجّل دخول كـ ' + escapeHtml(state.adminName) + '</div>' +
     renderAdminSelfPinSection() +
     '<div class="section" data-action="go-admin-pins" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
-    '<div><div style="color:#FFFFFF;font-size:14px;font-weight:700;">تغيير رموز الفاحصين</div><div style="color:#8E8E93;font-size:12px;margin-top:2px;">تعديل الرمز السري لأي فاحص من القائمة</div></div>' +
+    '<div><div style="color:#FFFFFF;font-size:14px;font-weight:700;">الفاحصون</div><div style="color:#8E8E93;font-size:12px;margin-top:2px;">إضافة فاحص، تعديل اسمه أو رمزه، أو حذفه</div></div>' +
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2" style="transform:rotate(180deg);flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg></div>' +
     '<div class="section" data-action="go-admin-admins" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
     '<div><div style="color:#FFFFFF;font-size:14px;font-weight:700;">الأدمنز</div><div style="color:#8E8E93;font-size:12px;margin-top:2px;">إضافة أدمن جديد أو تغيير رمز أدمن حالي</div></div>' +
@@ -1459,25 +1510,44 @@ function renderAdminSelfPinSection() {
 
 function renderAdminDrivers() {
   var editing = state.adminEditDriverName;
-  var rows = DRIVERS.map(function (name) {
+  var names = Object.keys(driverPinsCache).sort();
+  var rows = names.map(function (name) {
     var active = editing === name;
     return '<div style="background:#1C1C1E;border-radius:10px;padding:10px 12px;margin-bottom:8px;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" data-action="admin-select-driver" data-driver="' + escapeHtml(name) + '">' +
       '<span style="color:#FFFFFF;font-size:13.5px;">' + escapeHtml(name) + '</span>' +
-      '<span style="color:#0A84FF;font-size:12px;">' + (active ? "إلغاء" : "تغيير الرمز") + "</span></div>" +
+      '<span style="color:#0A84FF;font-size:12px;">' + (active ? "إلغاء" : "تعديل") + "</span></div>" +
       (active
-        ? '<div style="margin-top:10px;display:flex;gap:8px;">' +
+        ? '<div style="margin-top:10px;">' +
+          '<label class="label">الاسم</label>' +
+          '<input class="input" data-field="adminEditDriverNewName" value="' + escapeHtml(state.adminEditDriverNewName || "") + '" style="margin-bottom:8px;" />' +
+          '<label class="label">رمز جديد (اتركه فارغًا لعدم التغيير)</label>' +
+          '<div style="display:flex;gap:8px;">' +
           '<input class="input" data-field="adminNewPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="رمز جديد (4 أرقام)" value="' + escapeHtml(state.adminNewPin || "") + '" style="flex:1;" />' +
-          '<button type="button" class="btn-primary" data-action="admin-save-driver-pin" data-driver="' + escapeHtml(name) + '" style="white-space:nowrap;padding:10px 14px;">حفظ</button></div>' +
-          (state.adminPinMsg ? '<div style="color:' + (state.adminPinMsgOk ? "#0A84FF" : "#FF453A") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(state.adminPinMsg) + "</div>" : "")
+          '<button type="button" class="btn-primary" data-action="admin-save-driver" data-driver="' + escapeHtml(name) + '" style="white-space:nowrap;padding:10px 14px;">حفظ</button></div>' +
+          (state.adminPinMsg ? '<div style="color:' + (state.adminPinMsgOk ? "#0A84FF" : "#FF453A") + ';font-size:11.5px;margin-top:6px;">' + escapeHtml(state.adminPinMsg) + "</div>" : "") +
+          '<button type="button" data-action="admin-delete-driver" data-driver="' + escapeHtml(name) + '" style="background:none;border:none;color:#FF453A;font-size:11.5px;margin-top:10px;display:flex;align-items:center;gap:5px;">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>' +
+          "حذف هذا الفاحص</button>" +
+          "</div>"
         : "") +
       "</div>";
   }).join("");
   return '<div style="padding-bottom:40px;">' +
     '<div class="ios-header" style="display:flex;align-items:center;gap:10px;padding:20px 18px 12px;">' +
     '<button type="button" class="btn-icon" data-action="go-admin-menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>' +
-    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">تغيير رموز الفاحصين</div></div>' +
-    '<div style="padding:0 18px;">' + rows + "</div></div>";
+    '<div style="color:#FFFFFF;font-size:17px;font-weight:800;flex:1;">الفاحصون</div></div>' +
+    '<div style="padding:0 18px;">' +
+    '<div class="section-title" style="padding:0 4px;">الفاحصون الحاليون (' + names.length + ")</div>" +
+    rows +
+    '<div class="section" style="margin-top:6px;"><div class="section-title">إضافة فاحص جديد</div>' +
+    '<div style="margin-bottom:8px;"><label class="label">الاسم</label>' +
+    '<input class="input" data-field="adminNewDriverName" value="' + escapeHtml(state.adminNewDriverName || "") + '" placeholder="اسم الفاحص الجديد" /></div>' +
+    '<div><label class="label">الرمز (4 أرقام)</label>' +
+    '<input class="input" data-field="adminNewDriverPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="' + escapeHtml(state.adminNewDriverPin || "") + '" placeholder="مثال: 1234" /></div>' +
+    (state.adminDriverAddMsg ? '<div style="color:' + (state.adminDriverAddMsgOk ? "#0A84FF" : "#FF453A") + ';font-size:11.5px;margin-top:8px;">' + escapeHtml(state.adminDriverAddMsg) + "</div>" : "") +
+    '<button type="button" class="btn-primary" data-action="admin-add-driver" style="width:100%;margin-top:10px;">إضافة</button>' +
+    "</div></div></div>";
 }
 
 function renderAdminAdmins() {
@@ -1666,25 +1736,75 @@ function checkAdminPin() {
     render();
   });
 }
-function goAdminPins() { state.adminEditDriverName = null; state.adminNewPin = ""; state.adminPinMsg = ""; state.screen = "adminPins"; render(); }
+function goAdminPins() { state.adminEditDriverName = null; state.adminEditDriverNewName = ""; state.adminNewPin = ""; state.adminPinMsg = ""; state.adminNewDriverName = ""; state.adminNewDriverPin = ""; state.adminDriverAddMsg = ""; state.screen = "adminPins"; render(); }
 function goAdminAdmins() {
   state.adminEditAdminName = null; state.adminNewPin = ""; state.adminPinMsg = "";
   state.adminNewAdminName = ""; state.adminNewAdminPin = ""; state.adminAddMsg = "";
   state.screen = "adminAdmins"; render();
 }
-function adminSaveDriverPin(name) {
+function adminSaveDriver(oldName) {
+  var newName = (state.adminEditDriverNewName || "").trim();
   var pin = (state.adminNewPin || "").trim();
-  if (!/^[0-9]{4}$/.test(pin)) { state.adminPinMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminPinMsgOk = false; render(); return; }
+  if (!newName) { state.adminPinMsg = "الرجاء إدخال اسم"; state.adminPinMsgOk = false; render(); return; }
+  if (pin && !/^[0-9]{4}$/.test(pin)) { state.adminPinMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminPinMsgOk = false; render(); return; }
+  if (newName !== oldName && driverPinsCache.hasOwnProperty(newName)) { state.adminPinMsg = "هذا الاسم مستخدم مسبقًا"; state.adminPinMsgOk = false; render(); return; }
   if (!db) { state.adminPinMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.adminPinMsgOk = false; render(); return; }
-  hashPin(pin).then(function (hash) {
-    if (pinHashTakenByOther(driverPinsCache, hash, name)) {
+
+  function finish(hash) {
+    if (pinHashTakenByOther(driverPinsCache, hash, oldName)) {
       state.adminPinMsg = "هذا الرمز مستخدم من قبل فاحص آخر — اختر رمزًا مختلفًا"; state.adminPinMsgOk = false; render(); return;
     }
+    db.collection("driverPins").doc(newName).set({ hash: hash }).then(function () {
+      return newName !== oldName ? db.collection("driverPins").doc(oldName).delete() : Promise.resolve();
+    }).then(function () {
+      if (newName === oldName) return Promise.resolve();
+      return db.collection("inspections").where("driver", "==", oldName).get().then(function (snap) {
+        if (snap.empty) return;
+        var batch = db.batch();
+        snap.forEach(function (doc) { batch.update(doc.ref, { driver: newName }); });
+        return batch.commit();
+      });
+    }).then(function () {
+      state.adminPinMsg = "تم الحفظ بنجاح"; state.adminPinMsgOk = true; state.adminNewPin = "";
+      state.adminEditDriverName = newName; state.adminEditDriverNewName = newName;
+      render();
+    }).catch(function (e) { console.error(e); state.adminPinMsg = "تعذّر الحفظ: تحقق من الإنترنت"; state.adminPinMsgOk = false; render(); });
+  }
+
+  if (pin) {
+    hashPin(pin).then(finish);
+  } else {
+    finish(driverPinsCache[oldName]);
+  }
+}
+
+function adminDeleteDriver(name) {
+  if (!db) return;
+  if (!window.confirm(tr('هل أنت متأكد من حذف الفاحص "' + name + '"؟ الفحوصات السابقة باسمه ستبقى محفوظة.'))) return;
+  db.collection("driverPins").doc(name).delete().then(function () {
+    if (state.adminEditDriverName === name) { state.adminEditDriverName = null; state.adminEditDriverNewName = ""; }
+    render();
+  }).catch(function (e) { console.error("delete driver failed", e); });
+}
+
+function adminAddDriver() {
+  var name = (state.adminNewDriverName || "").trim();
+  var pin = (state.adminNewDriverPin || "").trim();
+  if (!name) { state.adminDriverAddMsg = "الرجاء إدخال اسم"; state.adminDriverAddMsgOk = false; render(); return; }
+  if (!/^[0-9]{4}$/.test(pin)) { state.adminDriverAddMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminDriverAddMsgOk = false; render(); return; }
+  if (driverPinsCache.hasOwnProperty(name)) { state.adminDriverAddMsg = "هذا الاسم موجود مسبقًا بين الفاحصين"; state.adminDriverAddMsgOk = false; render(); return; }
+  if (!db) { state.adminDriverAddMsg = "لا يوجد اتصال بالخدمة السحابية حاليًا"; state.adminDriverAddMsgOk = false; render(); return; }
+  hashPin(pin).then(function (hash) {
+    if (pinHashTakenByOther(driverPinsCache, hash, name)) {
+      state.adminDriverAddMsg = "هذا الرمز مستخدم من قبل فاحص آخر — اختر رمزًا مختلفًا"; state.adminDriverAddMsgOk = false; render(); return;
+    }
     db.collection("driverPins").doc(name).set({ hash: hash }).then(function () {
-      state.adminPinMsg = "تم تحديث الرمز بنجاح"; state.adminPinMsgOk = true; state.adminNewPin = ""; render();
-    }).catch(function (e) { console.error(e); state.adminPinMsg = "تعذّر الحفظ"; state.adminPinMsgOk = false; render(); });
+      state.adminDriverAddMsg = "تمت إضافة الفاحص بنجاح"; state.adminDriverAddMsgOk = true;
+      state.adminNewDriverName = ""; state.adminNewDriverPin = ""; render();
+    }).catch(function (e) { console.error(e); state.adminDriverAddMsg = "تعذّر الحفظ"; state.adminDriverAddMsgOk = false; render(); });
   });
 }
+
 function adminSaveAdminPin(name) {
   var pin = (state.adminNewPin || "").trim();
   if (!/^[0-9]{4}$/.test(pin)) { state.adminPinMsg = "الرمز يجب أن يكون 4 أرقام"; state.adminPinMsgOk = false; render(); return; }
@@ -1727,6 +1847,7 @@ function loadAdminEditDraft(record) {
     dateTime: record.dateTime || nowDateTimeLocal(),
     damages: (record.damages || []).map(function (m) { return Object.assign({}, m); }),
     selectedType: "D",
+    tireNotes: record.tireNotes || "",
     mechanicNotes: record.mechanicNotes || "",
     equipment: Object.assign(emptyChecklistFor(EQUIPMENT_ITEMS), record.equipment || {}),
     equipmentOtherText: record.equipmentOtherText || "",
@@ -1769,6 +1890,7 @@ function saveAdminEditReport() {
     placeNote: d.placeNote.trim(),
     dateTime: d.dateTime,
     damages: d.damages,
+    tireNotes: d.tireNotes.trim(),
     mechanicNotes: d.mechanicNotes.trim(),
     equipment: d.equipment,
     equipmentOtherText: d.equipmentOtherText.trim(),
@@ -1862,6 +1984,7 @@ function buildRecord() {
     placeNote: draft.placeNote.trim(),
     dateTime: draft.dateTime,
     damages: draft.damages,
+    tireNotes: draft.tireNotes.trim(),
     mechanicNotes: draft.mechanicNotes.trim(),
     equipment: draft.equipment,
     equipmentOtherText: draft.equipmentOtherText.trim(),
@@ -1924,7 +2047,7 @@ function checkInspectorCode() {
   var entered = draft.pinTry.trim();
   if (!/^[0-9]{4}$/.test(entered)) return;
   hashPin(entered).then(function (hash) {
-    var match = DRIVERS.find(function (name) { return driverPinsCache[name] === hash; });
+    var match = Object.keys(driverPinsCache).find(function (name) { return driverPinsCache[name] === hash; });
     if (match) {
       draft.driver = match;
       draft.pinVerified = true;
@@ -2103,8 +2226,15 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "go-admin-pins") goAdminPins();
     else if (action === "go-admin-admins") goAdminAdmins();
     else if (action === "admin-logout") { state.adminUnlocked = false; state.adminName = ""; goHome(); }
-    else if (action === "admin-select-driver") { state.adminEditDriverName = state.adminEditDriverName === t.dataset.driver ? null : t.dataset.driver; state.adminNewPin = ""; state.adminPinMsg = ""; render(); }
-    else if (action === "admin-save-driver-pin") adminSaveDriverPin(t.dataset.driver);
+    else if (action === "admin-select-driver") {
+      state.adminEditDriverName = state.adminEditDriverName === t.dataset.driver ? null : t.dataset.driver;
+      state.adminEditDriverNewName = state.adminEditDriverName || "";
+      state.adminNewPin = ""; state.adminPinMsg = "";
+      render();
+    }
+    else if (action === "admin-save-driver") adminSaveDriver(t.dataset.driver);
+    else if (action === "admin-delete-driver") adminDeleteDriver(t.dataset.driver);
+    else if (action === "admin-add-driver") adminAddDriver();
     else if (action === "admin-select-admin") { state.adminEditAdminName = state.adminEditAdminName === t.dataset.admin ? null : t.dataset.admin; state.adminNewPin = ""; state.adminPinMsg = ""; render(); }
     else if (action === "admin-save-admin-pin") adminSaveAdminPin(t.dataset.admin);
     else if (action === "admin-add-admin") adminAddAdmin();
@@ -2166,6 +2296,9 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
     if (field === "adminNewPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminNewPin = t.value; return; }
+    if (field === "adminEditDriverNewName") { state.adminEditDriverNewName = t.value; return; }
+    if (field === "adminNewDriverName") { state.adminNewDriverName = t.value; return; }
+    if (field === "adminNewDriverPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminNewDriverPin = t.value; return; }
     if (field === "newPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); draft.newPin = t.value; draft.changePinMsg = ""; return; }
     if (field === "adminSelfNewPin") { t.value = t.value.replace(/[^0-9]/g, "").slice(0, 4); state.adminSelfNewPin = t.value; state.adminSelfPinMsg = ""; return; }
     if (field === "adminNewAdminName") { state.adminNewAdminName = t.value; return; }
