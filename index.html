@@ -473,6 +473,22 @@ function badgeColorFor(damages) {
    car codes, notes) is left exactly as entered.
 ================================================================= */
 var I18N_EXACT = {
+  "محمد يحيى": "Mohammad Yahya",
+  "عوض نبعات": "Awad Nabaat",
+  "خلدون شعبان": "Khaldoun Shaaban",
+  "عامر هباهبه": "Amer Habahbeh",
+  "مجدي بوريني": "Majdi Bureini",
+  "احمد سميح": "Ahmad Samih",
+  "عوض شعيبات": "Awad Shuaibat",
+  "خالد مناعي": "Khaled Manai",
+  "خالد الحنيطي": "Khaled Al-Hunaiti",
+  "ركان دحدوح": "Rakan Dahdouh",
+  "مأمون العدوان": "Ma'moun Al-Adwan",
+  "حيدر الشيدي": "Haidar Al-Shaidi",
+  "نضال حنفي": "Nidal Hanafi",
+  "احمد المصري": "Ahmad Al-Masri",
+  "اياد ابو رعد": "Eyad Abu Raad",
+  "بهاء الجوهري": "Baha' Al-Jawhari",
   "فحص السيارات": "Vehicle Inspection",
   "سجل الفحوصات الدوري": "Periodic inspection log",
   "فحص جديد": "New Inspection",
@@ -1068,7 +1084,7 @@ function renderHome() {
         '<div style="flex:1;min-width:0;">' +
         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#FFFFFF;font-size:15px;font-weight:700;">' + escapeHtml(it.carCode || "بدون رمز") + '</span>' +
         '<span style="font-size:11px;color:' + it.badgeColor + ";background:" + it.badgeColor + '1F;padding:2px 8px;border-radius:999px;">' + sevLabel + "</span></div>" +
-        '<div style="color:#8E8E93;font-size:12px;">' + escapeHtml(it.driver || "—") + " · " + escapeHtml(it.place || "—") + "</div>" +
+        '<div style="color:#8E8E93;font-size:12px;"><span>' + escapeHtml(it.driver || "—") + "</span> · <span>" + escapeHtml(it.place || "—") + "</span></div>" +
         '<div style="color:#636366;font-size:11px;margin-top:2px;">' + formatDT(it.dateTime) + "</div></div>" +
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2" style="transform:rotate(180deg);"><path d="M9 6l6 6-6 6"/></svg></div>';
     }).join("");
@@ -1210,7 +1226,7 @@ function renderReports() {
       '<div style="flex:1;min-width:0;cursor:pointer;" data-action="open-detail" data-id="' + it.id + '">' +
       '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><span style="color:#FFFFFF;font-size:13.5px;font-weight:700;">' + escapeHtml(it.carCode || "—") + '</span>' +
       '<span style="font-size:10.5px;color:' + it.badgeColor + ";background:" + it.badgeColor + '1F;padding:1px 7px;border-radius:999px;">' + sevLabel + "</span></div>" +
-      '<div style="color:#8E8E93;font-size:11.5px;">' + escapeHtml(it.driver || "—") + " · " + formatDT(it.dateTime) + "</div></div>" +
+      '<div style="color:#8E8E93;font-size:11.5px;"><span>' + escapeHtml(it.driver || "—") + "</span> · " + formatDT(it.dateTime) + "</div></div>" +
       '<button type="button" data-action="open-print" data-id="' + it.id + '" title="طباعة" style="background:#2C2C2E;border:none;border-radius:9px;padding:8px 10px;flex-shrink:0;">' +
       '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg></button></div>';
   }
@@ -1294,7 +1310,7 @@ function renderDriverIdentityBlock() {
     }
     return '<div style="background:#1C1C1E;border:1px solid #38383A;border-radius:10px;padding:10px 12px;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;">' +
-      '<div style="display:flex;align-items:center;gap:6px;color:#0A84FF;font-size:12px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> ' + escapeHtml(draft.driver) + " — " + formatDT(draft.driverConfirmedAt) + "</div>" +
+      '<div style="display:flex;align-items:center;gap:6px;color:#0A84FF;font-size:12px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> <span>' + escapeHtml(draft.driver) + "</span> — " + formatDT(draft.driverConfirmedAt) + "</div>" +
       '<div style="display:flex;gap:10px;flex-shrink:0;">' +
       '<button type="button" data-action="toggle-change-pin" style="background:none;border:none;color:#636366;font-size:11px;text-decoration:underline;">' + (draft.changePinOpen ? "إلغاء" : "تغيير رمزي") + '</button>' +
       '<button type="button" data-action="reset-pin-check" style="background:none;border:none;color:#636366;font-size:11px;text-decoration:underline;">تسجيل خروج</button></div></div>' +
