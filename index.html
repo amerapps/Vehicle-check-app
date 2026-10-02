@@ -37,7 +37,14 @@
   input::placeholder, textarea::placeholder { color: var(--ios-label2); }
   button { cursor: pointer; transition: opacity .12s ease; }
   button:active { opacity: 0.55; }
-  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+  :root { --app-max-width: 480px; --print-max-width: 480px; }
+  #app { max-width: var(--app-max-width); margin: 0 auto; min-height: 100vh; position: relative; }
+  @media (min-width: 700px) {
+    :root { --app-max-width: 900px; --print-max-width: 820px; }
+    .ck-grid { grid-template-columns: repeat(3, 1fr) !important; }
+    .home-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
+    .home-list > .section { margin-bottom: 0 !important; }
+  }
   .input { width: 100%; background: var(--ios-card2); border: 1px solid var(--ios-sep); border-radius: 12px; padding: 11px 13px; color: var(--ios-label); font-size: 15px; outline: none; color-scheme: dark; }
   /* Native date/time pickers report a wide intrinsic size that can burst out
      of their card on mobile (especially inside a flex row) — min-width:0
@@ -1098,7 +1105,7 @@ function renderHome() {
           "طباعة / حفظ فحوصات هذا اليوم (" + filtered.length + ")</button>"
         : "<div></div>") +
       '<button type="button" data-action="clear-home-date" style="background:none;border:none;color:#636366;font-size:11.5px;text-decoration:underline;white-space:nowrap;">مسح فلتر التاريخ (' + formatDateOnly(state.homeDate) + ")</button></div>" : "") +
-    '<div style="padding:4px 18px;">' + listHtml + "</div>" +
+    '<div class="home-list" style="padding:4px 18px;">' + listHtml + "</div>" +
     '<button type="button" data-action="go-new" class="btn-primary" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:min(90%,420px);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 30px -8px rgba(79,217,198,0.5);">' +
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> فحص جديد</button>' +
     "</div>";
@@ -1334,7 +1341,7 @@ function renderInspectionFields(d) {
     '<textarea class="input" data-field="mechanicNotes" rows="3" style="resize:none;" placeholder="أي ملاحظات ميكانيكية، أو داخل المقصورة (مقاعد، ديكور، رائحة، أعطال...)">' + escapeHtml(d.mechanicNotes) + "</textarea></div>" +
 
     '<div class="section"><div class="section-title">التجهيزات</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+    '<div class="ck-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
     EQUIPMENT_ITEMS.map(function (item) {
       var on = d.equipment[item.key];
       return '<div style="display:flex;align-items:center;gap:8px;cursor:pointer;" data-action="toggle-checklist" data-group="equipment" data-key="' + item.key + '">' +
@@ -1345,7 +1352,7 @@ function renderInspectionFields(d) {
     "</div>" +
 
     '<div class="section"><div class="section-title">الوثائق</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+    '<div class="ck-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
     DOCUMENT_ITEMS.map(function (item) {
       var on = d.documents[item.key];
       return '<div style="display:flex;align-items:center;gap:8px;cursor:pointer;" data-action="toggle-checklist" data-group="documents" data-key="' + item.key + '">' +
@@ -1396,7 +1403,7 @@ function renderNew() {
     lockedWrap +
     "</div>" +
 
-    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #000000 60%, transparent);max-width:480px;margin:0 auto;">' +
+    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #000000 60%, transparent);max-width:var(--app-max-width);margin:0 auto;">' +
     '<button type="button" class="btn-primary" data-action="save-inspection" style="width:100%;opacity:' + (!unlocked ? "0.45" : d.saving ? "0.7" : "1") + ';" ' + (!unlocked || d.saving ? "disabled" : "") + ">" + (d.saving ? "جاري الحفظ..." : "حفظ الفحص") + "</button></div>" +
     "</div>";
 }
@@ -1419,7 +1426,7 @@ function renderDetail() {
   }
 
   function buildChecklistHtml2(items, key) {
-    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + items.map(function (item) {
+    return '<div class="ck-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + items.map(function (item) {
       var on = (record[key] || {})[item.key];
       return '<div style="display:flex;align-items:center;gap:8px;"><span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + '</span><span style="font-size:13px;color:#FFFFFF;">' + item.label + "</span></div>";
     }).join("") + "</div>";
@@ -1608,7 +1615,7 @@ function renderAdminEditReport() {
     "</div>" +
     renderInspectionFields(d) +
     "</div>" +
-    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #000000 60%, transparent);max-width:480px;margin:0 auto;">' +
+    '<div style="position:fixed;bottom:0;left:0;right:0;padding:12px 18px 18px;background:linear-gradient(to top, #000000 60%, transparent);max-width:var(--app-max-width);margin:0 auto;">' +
     '<button type="button" class="btn-primary" data-action="admin-save-report" style="width:100%;opacity:' + (d.saving ? "0.7" : "1") + ';" ' + (d.saving ? "disabled" : "") + ">" + (d.saving ? "جاري الحفظ..." : "حفظ التعديلات") + "</button></div>" +
     "</div>";
 }
@@ -1617,7 +1624,7 @@ function renderPrintOverlay() {
   if (!state.printRecord) return "";
   var record = state.printRecord;
   return '<div id="print-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
-    '<div style="width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
+    '<div style="width:100%;max-width:var(--print-max-width);max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
     '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #38383A;">' +
     '<div style="color:#FFFFFF;font-size:15px;font-weight:700;">معاينة التقرير</div>' +
     '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
@@ -1637,7 +1644,7 @@ function renderBatchPrintOverlay() {
     return '<div style="' + pageBreak + (i > 0 ? "margin-top:14px;" : "") + '">' + renderReport(rec) + "</div>";
   }).join("");
   return '<div id="print-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
-    '<div style="width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
+    '<div style="width:100%;max-width:var(--print-max-width);max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
     '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #38383A;">' +
     '<div style="color:#FFFFFF;font-size:15px;font-weight:700;">' + (batch.label || ("فحوصات يوم " + formatDateOnly(batch.date))) + " (" + batch.records.length + ")</div>" +
     '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
