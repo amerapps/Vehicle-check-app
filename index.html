@@ -91,10 +91,10 @@
    Constants
 ================================================================= */
 var TYPE_INFO = {
-  D: { label: "خبطة / انبعاج (Dent)" },
-  S: { label: "خدش (Scratch)" },
-  B: { label: "مكسور (Broken)" },
-  O: { label: "أخرى (Other)" }
+  D: { label: "خبطة / انبعاج (Dent)", color: "#FF9F0A", textColor: "#FFFFFF" },
+  S: { label: "خدش (Scratch)", color: "#FFD60A", textColor: "#1C1C1E" },
+  B: { label: "مكسور (Broken)", color: "#FF453A", textColor: "#FFFFFF" },
+  O: { label: "أخرى (Other)", color: "#8E8E93", textColor: "#FFFFFF" }
 };
 
 var EQUIPMENT_ITEMS = [
@@ -849,8 +849,9 @@ function renderCarDiagram(damages, opts) {
   var idAttr = opts.id ? ' id="' + opts.id + '"' : "";
   var boxClass = opts.boxClass ? ' ' + opts.boxClass : "";
   var marksHtml = damages.map(function (d) {
-    return '<div style="position:absolute;left:' + (d.x * 100) + '%;top:' + (d.y * 100) + '%;transform:translate(-50%,-50%);pointer-events:none;width:17px;height:17px;border-radius:50%;background:#fff;border:1.6px solid #000;box-shadow:0 0 0 1px #fff;display:flex;align-items:center;justify-content:center;">' +
-      '<span style="font-size:10px;font-weight:800;color:#000;font-family:Arial,Helvetica,sans-serif;line-height:1;">' + d.type + "</span></div>";
+    var ti = TYPE_INFO[d.type] || TYPE_INFO.O;
+    return '<div style="position:absolute;left:' + (d.x * 100) + '%;top:' + (d.y * 100) + '%;transform:translate(-50%,-50%);pointer-events:none;width:17px;height:17px;border-radius:50%;background:' + ti.color + ';border:1.6px solid #000;box-shadow:0 0 0 1px #fff;display:flex;align-items:center;justify-content:center;">' +
+      '<span style="font-size:10px;font-weight:800;color:' + ti.textColor + ';font-family:Arial,Helvetica,sans-serif;line-height:1;">' + d.type + "</span></div>";
   }).join("");
   var img = isDark ? CAR_DIAGRAM_IMG_DARK : CAR_DIAGRAM_IMG;
   return '<div style="width:100%;display:flex;justify-content:center;">' +
@@ -865,8 +866,8 @@ function renderTypePicker(selected) {
     Object.keys(TYPE_INFO).map(function (k) {
       var info = TYPE_INFO[k];
       var sel = k === selected;
-      return '<button type="button" class="type-btn" data-action="select-type" data-type="' + k + '" style="border:' + (sel ? "2px solid #0A84FF" : "1px solid #38383A") + ";background:" + (sel ? "#0A84FF1F" : "#2C2C2E") + '">' +
-        '<span style="font-size:18px;font-weight:800;color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;line-height:1;">' + k + "</span>" +
+      return '<button type="button" class="type-btn" data-action="select-type" data-type="' + k + '" style="border:' + (sel ? "2px solid " + info.color : "1px solid #38383A") + ";background:" + (sel ? info.color + "26" : "#2C2C2E") + '">' +
+        '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:' + info.color + ';font-size:12px;font-weight:800;color:' + info.textColor + ';font-family:Arial,Helvetica,sans-serif;line-height:1;">' + k + "</span>" +
         '<span style="font-size:9.5px;color:#8E8E93;text-align:center;">' + info.label + "</span>" +
         "</button>";
     }).join("") + "</div>";
@@ -877,7 +878,7 @@ function renderLegend() {
     Object.keys(TYPE_INFO).map(function (k) {
       var v = TYPE_INFO[k];
       return '<div style="display:flex;align-items:center;gap:5px;">' +
-        '<span style="width:15px;height:15px;border-radius:50%;background:#fff;border:1.4px solid #8E8E93;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#FFFFFF;">' + k + "</span>" +
+        '<span style="width:15px;height:15px;border-radius:50%;background:' + v.color + ';border:1.4px solid #000;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:' + v.textColor + ';">' + k + "</span>" +
         '<span style="font-size:11px;color:#8E8E93;">' + v.label + "</span></div>";
     }).join("") + "</div>";
 }
@@ -887,7 +888,7 @@ function renderPrintLegend() {
     Object.keys(TYPE_INFO).map(function (k) {
       var v = TYPE_INFO[k];
       return '<div style="display:flex;align-items:center;gap:4px;">' +
-        '<span style="width:13px;height:13px;border-radius:50%;background:#fff;border:1.2px solid #16181C;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#000;">' + k + "</span>" +
+        '<span style="width:13px;height:13px;border-radius:50%;background:' + v.color + ';border:1.2px solid #16181C;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:' + v.textColor + ';">' + k + "</span>" +
         '<span style="font-size:10px;color:#555;">' + v.label + "</span></div>";
     }).join("") + "</div>";
 }
@@ -902,6 +903,7 @@ function renderDamageListRow(mark, editable) {
       : (mark.note ? '<div style="color:#8E8E93;font-size:11px;margin-top:4px;">' + escapeHtml(mark.note) + "</div>" : "");
   }
   var removeBtn = editable ? '<button type="button" class="btn-icon" data-action="remove-damage" data-id="' + mark.id + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' : "";
+  var typeInfo = TYPE_INFO[mark.type] || TYPE_INFO.O;
   var photoUrl = mark.photoLocal || mark.photo || "";
   var photoHtml = "";
   if (photoUrl) {
@@ -915,7 +917,7 @@ function renderDamageListRow(mark, editable) {
   }
   return '<div style="background:#1C1C1E;border-radius:10px;padding:8px 10px;">' +
     '<div class="row-between"><div style="display:flex;align-items:center;gap:8px;">' +
-    '<span style="width:18px;height:18px;border-radius:50%;background:#fff;border:1.4px solid #38383A;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#FFFFFF;flex-shrink:0;">' + mark.type + "</span>" +
+    '<span style="width:18px;height:18px;border-radius:50%;background:' + typeInfo.color + ';border:1.4px solid #000;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:' + typeInfo.textColor + ';flex-shrink:0;">' + mark.type + "</span>" +
     '<div><div style="color:#FFFFFF;font-size:13px;">' + label + '</div><div style="color:#8E8E93;font-size:11px;">' + TYPE_INFO[mark.type].label + "</div></div></div>" +
     '<div style="display:flex;align-items:center;gap:6px;">' + photoHtml + removeBtn + "</div></div>" +
     noteHtml + "</div>";
@@ -933,8 +935,9 @@ function renderReport(record) {
     : otherDamages.length === 0
     ? ""
     : '<div style="display:flex;flex-direction:column;gap:5px;">' + otherDamages.map(function (mark) {
+        var oti = TYPE_INFO[mark.type] || TYPE_INFO.O;
         return '<div style="display:flex;align-items:baseline;gap:8px;font-size:12px;border-bottom:1px solid #eee;padding:6px 0;line-height:1.55;">' +
-          '<span style="width:15px;height:15px;border-radius:50%;background:#fff;border:1.2px solid #16181C;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#000;flex-shrink:0;transform:translateY(1px);">' + mark.type + "</span>" +
+          '<span style="width:15px;height:15px;border-radius:50%;background:' + oti.color + ';border:1.2px solid #16181C;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:' + oti.textColor + ';flex-shrink:0;transform:translateY(1px);">' + mark.type + "</span>" +
           '<span style="font-weight:600;flex-shrink:0;">' + classifyPoint(mark.x, mark.y) + '</span>' +
           '<span style="color:#555;">' + TYPE_INFO[mark.type].label + (mark.note ? " · " + escapeHtml(mark.note) : "") + "</span></div>";
       }).join("") + "</div>";
