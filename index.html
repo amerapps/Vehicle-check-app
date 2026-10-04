@@ -852,6 +852,7 @@ var state = {
   adminSelfPinMsgOk: false,
   adminName: "",
   adminPinTry: "",
+  adminRememberPin: false,
   adminPinError: "",
   adminEditDriverName: null,
   adminEditDriverNewName: "",
@@ -1621,6 +1622,9 @@ function renderAdminGate() {
     '<div class="section"><div class="section-title">رمز الأدمن</div>' +
     '<input class="input" data-field="adminPinTry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="أدخل رمز الأدمن المكوّن من 4 أرقام" value="' + escapeHtml(state.adminPinTry) + '" />' +
     (state.adminPinError ? '<div style="color:#FF453A;font-size:11.5px;margin-top:6px;">' + state.adminPinError + "</div>" : "") +
+    '<div data-action="toggle-admin-remember-pin" style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;">' +
+    '<span class="chk-box' + (state.adminRememberPin ? " on" : "") + '">' + (state.adminRememberPin ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
+    '<span style="font-size:12px;color:#8E8E93;">تذكرني على هذا الجهاز</span></div>' +
     "</div></div></div>";
 }
 
@@ -1940,6 +1944,14 @@ function goAdmin() {
   state.screen = "admin";
   state.adminPinTry = "";
   state.adminPinError = "";
+  if (!state.adminUnlocked) {
+    var remembered = lsGet("vi_remembered_admin_pin", null);
+    if (remembered) {
+      state.adminRememberPin = true;
+      state.adminPinTry = remembered;
+      checkAdminPin();
+    }
+  }
   render();
 }
 function checkAdminPin() {
@@ -1953,9 +1965,12 @@ function checkAdminPin() {
       state.adminPinError = "";
       state.adminPinTry = "";
       state.screen = "admin";
+      if (state.adminRememberPin) { lsSet("vi_remembered_admin_pin", entered); }
+      else { localStorage.removeItem("vi_remembered_admin_pin"); }
     } else {
       state.adminPinError = "رمز غير صحيح";
       state.adminPinTry = "";
+      if (lsGet("vi_remembered_admin_pin", null) === entered) { localStorage.removeItem("vi_remembered_admin_pin"); }
     }
     render();
   });
@@ -2469,6 +2484,7 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "add-other-item") { commitOtherItem(t.dataset.group); render(); }
     else if (action === "remove-other-item") { var adOi = activeDraft(); adOi[t.dataset.group + "OtherItems"].splice(parseInt(t.dataset.index, 10), 1); render(); }
     else if (action === "toggle-remember-pin") { draft.rememberPin = !draft.rememberPin; render(); }
+    else if (action === "toggle-admin-remember-pin") { state.adminRememberPin = !state.adminRememberPin; render(); }
     else if (action === "save-inspection") saveInspection();
     else if (action === "reset-pin-check") { draft.driver = ""; draft.pinVerified = false; draft.pinError = ""; draft.pinTry = ""; render(); }
     else if (action === "open-print") { state.printRecord = inspectionsCache[t.dataset.id] || null; render(); }
