@@ -615,6 +615,14 @@ var I18N_EXACT = {
   "فحص الهيكل": "Body Inspection",
   "أخرى": "Other",
   "إضافة": "Add",
+  "مقارنة عدادات السيارات": "Compare Vehicle Odometers",
+  "اختر مجموعة سيارات لمقارنة آخر قراءة عداد مسجّلة لكل وحدة": "Select a group of vehicles to compare each one's latest recorded odometer reading",
+  "اختر سيارتين أو أكثر من فوق لعرض المقارنة": "Select two or more vehicles above to see the comparison",
+  "الأكثر ← الأقل": "Highest → Lowest",
+  "الأقل ← الأكثر": "Lowest → Highest",
+  "الأكثر": "Highest",
+  "الأقل": "Lowest",
+  "لا توجد بيانات عداد": "No odometer data",
   "أضف بند آخر": "Add another item",
   "اكتب ثم اضغط إضافة": "Type then tap Add",
   "إلغاء": "Cancel",
@@ -832,6 +840,8 @@ var state = {
   reportsDateFrom: "",
   reportsDateTo: "",
   reportsRangeError: "",
+  compareSelectedCars: [],
+  compareSortDir: "desc",
   detailDeleteOpen: false,
   detailDeletePinTry: "",
   detailDeleteError: "",
@@ -1347,7 +1357,47 @@ function renderReports() {
         "</div>"
       : "") +
 
+    (state.adminUnlocked ? renderCompareSection() : "") +
+
     "</div></div>";
+}
+
+function renderCompareSection() {
+  var selected = state.compareSelectedCars;
+  var vehicles = vehiclesCache.slice().sort();
+  var dir = state.compareSortDir;
+  var results = selected
+    .map(function (code) { return { code: code, odo: getLatestOdometerForCar(code) }; })
+    .sort(function (a, b) {
+      var av = a.odo === null ? -Infinity : a.odo, bv = b.odo === null ? -Infinity : b.odo;
+      return dir === "desc" ? bv - av : av - bv;
+    });
+  return '<div class="section"><div class="section-title">مقارنة عدادات السيارات</div>' +
+    '<div style="color:#8E8E93;font-size:12px;margin-bottom:10px;">اختر مجموعة سيارات لمقارنة آخر قراءة عداد مسجّلة لكل وحدة</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">' +
+    vehicles.map(function (code) {
+      var on = selected.indexOf(code) !== -1;
+      return '<div data-action="toggle-compare-car" data-code="' + escapeHtml(code) + '" style="cursor:pointer;padding:7px 12px;border-radius:999px;border:1px solid ' + (on ? "#0A84FF" : "#38383A") + ";background:" + (on ? "#0A84FF26" : "#2C2C2E") + ';color:' + (on ? "#0A84FF" : "#FFFFFF") + ';font-size:12.5px;font-weight:600;">' + escapeHtml(code) + "</div>";
+    }).join("") +
+    "</div>" +
+    (selected.length === 0
+      ? '<div style="color:#8E8E93;font-size:12px;">اختر سيارتين أو أكثر من فوق لعرض المقارنة</div>'
+      : '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">' +
+        '<button type="button" data-action="toggle-compare-sort" style="background:#2C2C2E;border:none;border-radius:9px;padding:6px 12px;color:#0A84FF;font-size:12px;display:flex;align-items:center;gap:5px;">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2"><path d="M12 4v16M6 10l6-6 6 6M6 14l6 6 6-6"/></svg>' +
+        (dir === "desc" ? "الأكثر ← الأقل" : "الأقل ← الأكثر") + "</button></div>" +
+        '<div style="display:flex;flex-direction:column;gap:8px;">' +
+        results.map(function (r, idx) {
+          var crownHtml = (idx === 0 && r.odo !== null)
+            ? '<span style="font-size:10.5px;color:#30D158;background:#30D1581F;padding:1px 7px;border-radius:999px;">' + (dir === "desc" ? "الأكثر" : "الأقل") + "</span>"
+            : (idx === results.length - 1 && results.length > 1 && r.odo !== null)
+              ? '<span style="font-size:10.5px;color:#FF9F0A;background:#FF9F0A1F;padding:1px 7px;border-radius:999px;">' + (dir === "desc" ? "الأقل" : "الأكثر") + "</span>"
+              : "";
+          return '<div style="background:#1C1C1E;border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;">' +
+            '<div style="display:flex;align-items:center;gap:8px;"><span style="color:#FFFFFF;font-size:13.5px;font-weight:700;">' + escapeHtml(r.code) + "</span>" + crownHtml + "</div>" +
+            '<span style="color:#8E8E93;font-size:12.5px;">' + (r.odo === null ? "لا توجد بيانات عداد" : r.odo.toLocaleString("en-US") + " كم") + "</span></div>";
+        }).join("") + "</div>")
+    + "</div>";
 }
 
 function renderPastInspections() {
@@ -1883,7 +1933,7 @@ function openDetail(id) {
   render();
 }
 function goVehicles() { state.newVehicleCode = ""; state.vehicleError = ""; state.screen = "vehicles"; render(); }
-function goReports() { state.reportsCarQuery = ""; state.reportsDriverFilter = ""; state.reportsDateFrom = ""; state.reportsDateTo = ""; state.reportsRangeError = ""; state.screen = "reports"; render(); }
+function goReports() { state.reportsCarQuery = ""; state.reportsDriverFilter = ""; state.reportsDateFrom = ""; state.reportsDateTo = ""; state.reportsRangeError = ""; state.compareSelectedCars = []; state.compareSortDir = "desc"; state.screen = "reports"; render(); }
 
 /* -------------------- Admin -------------------- */
 function goAdmin() {
@@ -2173,6 +2223,20 @@ function buildRecord() {
   };
 }
 
+function getLatestOdometerForCar(carCode) {
+  var code = (carCode || "").trim().toLowerCase();
+  var best = null, bestTime = -Infinity;
+  inspectionsIndex.forEach(function (it) {
+    if ((it.carCode || "").trim().toLowerCase() !== code) return;
+    var n = parseInt(it.odometer, 10);
+    if (isNaN(n)) return;
+    var t = it.dateTime ? new Date(it.dateTime).getTime() : NaN;
+    if (isNaN(t) || t <= bestTime) return;
+    bestTime = t; best = n;
+  });
+  return best;
+}
+
 function getMaxOdometerForCar(carCode, excludeId) {
   var code = (carCode || "").trim().toLowerCase();
   if (!code) return null;
@@ -2380,6 +2444,13 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "go-vehicles") goVehicles();
     else if (action === "go-reports") goReports();
     else if (action === "filter-by-driver") { state.reportsDriverFilter = state.reportsDriverFilter === t.dataset.driver ? "" : t.dataset.driver; render(); }
+    else if (action === "toggle-compare-car") {
+      var code = t.dataset.code;
+      var idx = state.compareSelectedCars.indexOf(code);
+      if (idx === -1) state.compareSelectedCars.push(code); else state.compareSelectedCars.splice(idx, 1);
+      render();
+    }
+    else if (action === "toggle-compare-sort") { state.compareSortDir = state.compareSortDir === "desc" ? "asc" : "desc"; render(); }
     else if (action === "print-range") { if (state.reportsDateFrom && state.reportsDateTo) openBatchPrintRange(state.reportsDateFrom, state.reportsDateTo); }
     else if (action === "clear-home-date") { state.homeDate = ""; render(); }
     else if (action === "print-day") openBatchPrint(state.homeDate);
