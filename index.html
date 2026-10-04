@@ -413,23 +413,30 @@ function nowDateTimeLocal() {
   function pad(n) { return String(n).padStart(2, "0"); }
   return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
 }
+// U+2066 (LRI) / U+2069 (PDI): invisible Unicode isolation marks. They force the
+// wrapped text to resolve its own left-to-right direction regardless of the
+// surrounding Arabic context, without adding HTML tags — so the fix still works
+// even where callers run the result through escapeHtml() (e.g. row()/cell()).
+function ltrIsolate(s) { return "\u2066" + s + "\u2069"; }
 function formatDT(v) {
   if (!v) return "—";
   var d = new Date(v);
   if (isNaN(d.getTime())) return v;
-  return d.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+  var datePart = d.toLocaleDateString("en-GB", { dateStyle: "medium" });
+  var timePart = d.toLocaleTimeString("en-GB", { timeStyle: "short" });
+  return ltrIsolate(datePart) + " — " + ltrIsolate(timePart);
 }
 function formatDateOnly(v) {
   if (!v) return "—";
   var d = new Date(v);
   if (isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("en-GB", { dateStyle: "medium" });
+  return ltrIsolate(d.toLocaleDateString("en-GB", { dateStyle: "medium" }));
 }
 function formatTimeOnly(v) {
   if (!v) return "—";
   var d = new Date(v);
   if (isNaN(d.getTime())) return v;
-  return d.toLocaleTimeString("en-GB", { timeStyle: "short" });
+  return ltrIsolate(d.toLocaleTimeString("en-GB", { timeStyle: "short" }));
 }
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -452,11 +459,43 @@ function findNearMark(damages, xFrac, yFrac) {
   }
   return best;
 }
+function otherItemsOf(record, group) {
+  // New records store an array (group + "OtherItems"); older saved records
+  // only have a single free-text string (group + "OtherText") — fall back to it.
+  var arr = record[group + "OtherItems"];
+  if (arr && arr.length) return arr;
+  var legacy = record[group + "OtherText"];
+  return legacy ? [legacy] : [];
+}
+function commitOtherItem(group) {
+  var d = activeDraft();
+  var val = (d[group + "OtherText"] || "").trim();
+  if (!val) return;
+  if (d[group + "OtherItems"].indexOf(val) === -1) d[group + "OtherItems"].push(val);
+  d[group + "OtherText"] = "";
+}
 function emptyChecklistFor(items) {
   var o = {};
   items.forEach(function (i) { o[i.key] = false; });
   return o;
 }
+function renderOtherItemsBlock(d, group, datalistId) {
+  var items = d[group + "OtherItems"] || [];
+  var itemsHtml = items.map(function (val, idx) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;">' +
+      '<span class="chk-box on"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>' +
+      '<span style="font-size:13px;color:#FFFFFF;flex:1;">' + escapeHtml(val) + "</span>" +
+      '<button type="button" class="btn-icon" data-action="remove-other-item" data-group="' + group + '" data-index="' + idx + '" style="padding:3px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+      "</div>";
+  }).join("");
+  return (itemsHtml ? '<div style="margin-top:6px;">' + itemsHtml + "</div>" : "") +
+    '<div style="margin-top:10px;"><label class="label">أضف بند آخر</label>' +
+    '<div style="display:flex;gap:8px;">' +
+    '<input class="input" data-field="' + group + 'OtherText" list="' + datalistId + '" placeholder="اكتب ثم اضغط إضافة" value="' + escapeHtml(d[group + "OtherText"]) + '" style="flex:1;" />' +
+    '<button type="button" class="btn-primary" data-action="add-other-item" data-group="' + group + '" style="white-space:nowrap;padding:0 16px;">إضافة</button>' +
+    "</div>" + datalistHtml(datalistId, group + "OtherText") + "</div>";
+}
+
 function badgeColorFor(damages) {
   if (damages.length === 0) return "#0A84FF";
   if (damages.some(function (d) { return d.type === "B"; })) return "#FF453A";
@@ -576,6 +615,8 @@ var I18N_EXACT = {
   "فحص الهيكل": "Body Inspection",
   "أخرى": "Other",
   "إضافة": "Add",
+  "أضف بند آخر": "Add another item",
+  "اكتب ثم اضغط إضافة": "Type then tap Add",
   "إلغاء": "Cancel",
   "حفظ": "Save",
   "تغيير": "Change",
@@ -835,8 +876,10 @@ function freshDraft() {
     mechanicNotes: "",
     equipment: emptyChecklistFor(EQUIPMENT_ITEMS),
     equipmentOtherText: "",
+    equipmentOtherItems: [],
     documents: emptyChecklistFor(DOCUMENT_ITEMS),
     documentOtherText: "",
+    documentOtherItems: [],
     pastInspections: null,
     pastLoading: false,
     errorMsg: "",
@@ -1013,10 +1056,10 @@ function renderReport(record) {
     '<div style="font-size:12.5px;line-height:1.6;color:' + (record.mechanicNotes ? "#16181C" : "#555") + ';">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div>" +
 
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">التجهيزات</div>' + equipmentHtml +
-    (record.equipmentOtherText ? '<div style="margin-top:8px;font-size:12px;line-height:1.5;">أخرى: ' + escapeHtml(record.equipmentOtherText) + "</div>" : "") +
+    (otherItemsOf(record, "equipment").length ? '<div style="margin-top:8px;font-size:12px;line-height:1.5;">أخرى: ' + escapeHtml(otherItemsOf(record, "equipment").join("، ")) + "</div>" : "") +
 
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">الوثائق</div>' + documentsHtml +
-    (record.documentOtherText ? '<div style="margin-top:8px;font-size:12px;line-height:1.5;">أخرى: ' + escapeHtml(record.documentOtherText) + "</div>" : "") +
+    (otherItemsOf(record, "documents").length ? '<div style="margin-top:8px;font-size:12px;line-height:1.5;">أخرى: ' + escapeHtml(otherItemsOf(record, "documents").join("، ")) + "</div>" : "") +
 
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">هوية الفاحص</div>' +
     '<div style="font-size:12px;line-height:1.55;">✔ تم تأكيد الهوية عبر الرمز الشخصي لـ <b>' + escapeHtml(record.driver || "—") + '</b><div style="color:#555;margin-top:3px;">بتاريخ: ' + formatDateOnly(record.driverConfirmedAt) + ' — الوقت: ' + formatTimeOnly(record.driverConfirmedAt) + "</div></div>" +
@@ -1393,7 +1436,7 @@ function renderInspectionFields(d) {
         '<span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
         '<span style="font-size:13px;color:#FFFFFF;">' + item.label + "</span></div>";
     }).join("") + "</div>" +
-    '<div style="margin-top:10px;"><label class="label">أخرى</label><input class="input" data-field="equipmentOtherText" list="dl-equipmentOtherText" placeholder="بند إضافي" value="' + escapeHtml(d.equipmentOtherText) + '" />' + datalistHtml("dl-equipmentOtherText", "equipmentOtherText") + "</div>" +
+    renderOtherItemsBlock(d, "equipment", "dl-equipmentOtherText") +
     "</div>" +
 
     '<div class="section"><div class="section-title">الوثائق</div>' +
@@ -1404,7 +1447,7 @@ function renderInspectionFields(d) {
         '<span class="chk-box' + (on ? " on" : "") + '">' + (on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
         '<span style="font-size:13px;color:#FFFFFF;">' + item.label + "</span></div>";
     }).join("") + "</div>" +
-    '<div style="margin-top:10px;"><label class="label">أخرى</label><input class="input" data-field="documentOtherText" list="dl-documentOtherText" placeholder="بند إضافي" value="' + escapeHtml(d.documentOtherText) + '" />' + datalistHtml("dl-documentOtherText", "documentOtherText") + "</div>" +
+    renderOtherItemsBlock(d, "documents", "dl-documentOtherText") +
     "</div>" +
 
     (d.errorMsg ? '<div style="color:#FF453A;font-size:13px;text-align:center;margin-bottom:10px;">' + escapeHtml(d.errorMsg) + "</div>" : "");
@@ -1499,8 +1542,8 @@ function renderDetail() {
     '<div class="section"><div class="section-title">حالة الهيكل</div>' + renderLegend() + renderCarDiagram(damages, { editable: false, theme: "dark" }) + damagesHtml + "</div>" +
     '<div class="section"><div class="section-title">ملاحظات على الإطارات</div><div style="color:' + (record.tireNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.tireNotes || "لا توجد ملاحظات") + "</div></div>" +
     '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div><div style="color:' + (record.mechanicNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div></div>" +
-    '<div class="section"><div class="section-title">التجهيزات</div>' + equipmentHtml2 + (record.equipmentOtherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.equipmentOtherText) + "</div>" : "") + "</div>" +
-    '<div class="section"><div class="section-title">الوثائق</div>' + documentsHtml2 + (record.documentOtherText ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(record.documentOtherText) + "</div>" : "") + "</div>" +
+    '<div class="section"><div class="section-title">التجهيزات</div>' + equipmentHtml2 + (otherItemsOf(record, "equipment").length ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(otherItemsOf(record, "equipment").join("، ")) + "</div>" : "") + "</div>" +
+    '<div class="section"><div class="section-title">الوثائق</div>' + documentsHtml2 + (otherItemsOf(record, "documents").length ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(otherItemsOf(record, "documents").join("، ")) + "</div>" : "") + "</div>" +
     '<div class="section"><div class="section-title">هوية الفاحص</div>' + row("الفاحص", record.driver) +
     '<div style="display:flex;align-items:center;gap:6px;color:#0A84FF;font-size:13px;margin-top:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"/></svg> تم تأكيد الهوية عبر الرمز الشخصي بتاريخ ' + formatDT(record.driverConfirmedAt) + "</div></div>" +
     renderDeleteReportSection(record) +
@@ -1981,9 +2024,11 @@ function loadAdminEditDraft(record) {
     tireNotes: record.tireNotes || "",
     mechanicNotes: record.mechanicNotes || "",
     equipment: Object.assign(emptyChecklistFor(EQUIPMENT_ITEMS), record.equipment || {}),
-    equipmentOtherText: record.equipmentOtherText || "",
+    equipmentOtherText: "",
+    equipmentOtherItems: otherItemsOf(record, "equipment").slice(),
     documents: Object.assign(emptyChecklistFor(DOCUMENT_ITEMS), record.documents || {}),
-    documentOtherText: record.documentOtherText || "",
+    documentOtherText: "",
+    documentOtherItems: otherItemsOf(record, "documents").slice(),
     errorMsg: "",
     saving: false
   };
@@ -2011,6 +2056,8 @@ function saveAdminEditReport() {
       return;
     }
   }
+  commitOtherItem("equipment");
+  commitOtherItem("documents");
   d.errorMsg = "";
   d.saving = true;
   render();
@@ -2024,9 +2071,9 @@ function saveAdminEditReport() {
     tireNotes: d.tireNotes.trim(),
     mechanicNotes: d.mechanicNotes.trim(),
     equipment: d.equipment,
-    equipmentOtherText: d.equipmentOtherText.trim(),
+    equipmentOtherItems: d.equipmentOtherItems,
     documents: d.documents,
-    documentOtherText: d.documentOtherText.trim(),
+    documentOtherItems: d.documentOtherItems,
     editedByAdmin: state.adminName || "",
     editedAt: nowIso()
   };
@@ -2106,6 +2153,8 @@ function undoLastDamage() {
 }
 
 function buildRecord() {
+  commitOtherItem("equipment");
+  commitOtherItem("documents");
   return {
     carCode: draft.carCode.trim(),
     odometer: draft.odometer.trim(),
@@ -2118,9 +2167,9 @@ function buildRecord() {
     tireNotes: draft.tireNotes.trim(),
     mechanicNotes: draft.mechanicNotes.trim(),
     equipment: draft.equipment,
-    equipmentOtherText: draft.equipmentOtherText.trim(),
+    equipmentOtherItems: draft.equipmentOtherItems,
     documents: draft.documents,
-    documentOtherText: draft.documentOtherText.trim()
+    documentOtherItems: draft.documentOtherItems
   };
 }
 
@@ -2161,8 +2210,8 @@ function saveInspection() {
   db.collection("inspections").doc(id).set(record).then(function () {
     // remember what was typed, for the "smart" fields next time
     pushHistory("placeNote", record.placeNote);
-    pushHistory("equipmentOtherText", record.equipmentOtherText);
-    pushHistory("documentOtherText", record.documentOtherText);
+    (record.equipmentOtherItems || []).forEach(function (v) { pushHistory("equipmentOtherText", v); });
+    (record.documentOtherItems || []).forEach(function (v) { pushHistory("documentOtherText", v); });
 
     draft.saving = false;
     goHome();
@@ -2346,6 +2395,8 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "close-photo-view") { state.viewPhotoUrl = null; render(); }
     else if (action === "undo-damage") { undoLastDamage(); }
     else if (action === "toggle-checklist") { var adCk = activeDraft()[t.dataset.group]; adCk[t.dataset.key] = !adCk[t.dataset.key]; render(); }
+    else if (action === "add-other-item") { commitOtherItem(t.dataset.group); render(); }
+    else if (action === "remove-other-item") { var adOi = activeDraft(); adOi[t.dataset.group + "OtherItems"].splice(parseInt(t.dataset.index, 10), 1); render(); }
     else if (action === "toggle-remember-pin") { draft.rememberPin = !draft.rememberPin; render(); }
     else if (action === "save-inspection") saveInspection();
     else if (action === "reset-pin-check") { draft.driver = ""; draft.pinVerified = false; draft.pinError = ""; draft.pinTry = ""; render(); }
@@ -2391,6 +2442,16 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "save-own-pin") saveOwnDriverPin();
     else if (action === "toggle-admin-self-pin") { state.adminSelfPinOpen = !state.adminSelfPinOpen; state.adminSelfNewPin = ""; state.adminSelfPinMsg = ""; render(); }
     else if (action === "save-admin-self-pin") saveAdminSelfPin();
+  });
+
+  app.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    var field = e.target.dataset ? e.target.dataset.field : null;
+    if (field === "equipmentOtherText" || field === "documentOtherText") {
+      e.preventDefault();
+      commitOtherItem(field === "equipmentOtherText" ? "equipment" : "documents");
+      render();
+    }
   });
 
   app.addEventListener("input", function (e) {
