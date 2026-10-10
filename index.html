@@ -44,6 +44,17 @@
     .ck-grid { grid-template-columns: repeat(3, 1fr) !important; }
     .home-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
     .home-list > .section { margin-bottom: 0 !important; }
+    /* Bottom sheets (the ⋯ menu, print previews) dock to the screen's right edge
+       as a tall side panel instead of a centered strip, so they use the extra
+       desktop width instead of wasting it either side. */
+    .sheet-panel {
+      position: fixed !important;
+      top: 0 !important; bottom: 0 !important; right: 0 !important; left: auto !important;
+      height: 100% !important; max-height: none !important;
+      width: 420px !important; max-width: 90vw !important;
+      margin: 0 !important;
+      border-radius: 18px 0 0 18px !important;
+    }
   }
   .input { width: 100%; background: var(--ios-card2); border: 1px solid var(--ios-sep); border-radius: 12px; padding: 11px 13px; color: var(--ios-label); font-size: 15px; outline: none; color-scheme: dark; }
   /* Native date/time pickers report a wide intrinsic size that can burst out
@@ -105,8 +116,16 @@ var EQUIPMENT_ITEMS = [
   { key: "triangle", label: "المثلث العاكس" },
   { key: "charger", label: "شاحن الكهرباء" },
   { key: "sealant", label: "مادة مانع البنشر" },
-  { key: "flag", label: "الساريه / العلم" }
+  { key: "flag", label: "الساريه / العلم" },
+  { key: "airPump", label: "منفاخ الهواء" }
 ];
+var COMPARE_GROUP_DASTER = (function () {
+  var arr = [];
+  for (var n = 22830; n <= 22838; n++) arr.push(String(n));
+  return arr;
+})();
+var COMPARE_GROUP_KAHRABA = ["22721", "22722", "22723", "22725", "22726", "22727", "22728", "22858", "22859", "22860"];
+
 var DOCUMENT_ITEMS = [
   { key: "license", label: "الرخصة" },
   { key: "insurance", label: "التأمين" },
@@ -616,7 +635,15 @@ var I18N_EXACT = {
   "أخرى": "Other",
   "إضافة": "Add",
   "مقارنة عدادات السيارات": "Compare Vehicle Odometers",
-  "اختر مجموعة سيارات لمقارنة آخر قراءة عداد مسجّلة لكل وحدة": "Select a group of vehicles to compare each one's latest recorded odometer reading",
+  "اختر مجموعة جاهزة، أو اختر سيارات بشكل حر من القائمة تحت، لمقارنة آخر قراءة عداد مسجّلة لكل وحدة": "Pick a ready-made group, or choose vehicles freely from the list below, to compare each one's latest recorded odometer reading",
+  "أو اختر سيارات بشكل حر:": "Or choose vehicles freely:",
+  "مجموعة الداستر": "Duster Group",
+  "مجموعة الكهرباء": "Electric Group",
+  "باقي المركبات": "Rest of the Vehicles",
+  "كل المركبات": "All Vehicles",
+  "السيارة (اختياري)": "Vehicle (optional)",
+  "كل السيارات": "All vehicles",
+  "تفريغ الاختيار": "Clear Selection",
   "اختر سيارتين أو أكثر من فوق لعرض المقارنة": "Select two or more vehicles above to see the comparison",
   "الأكثر ← الأقل": "Highest → Lowest",
   "الأقل ← الأكثر": "Lowest → Highest",
@@ -735,6 +762,7 @@ var I18N_EXACT = {
   "شاحن الكهرباء": "Electric Charger",
   "مادة مانع البنشر": "Tire Sealant",
   "الساريه / العلم": "Flagpole / Flag",
+  "منفاخ الهواء": "Air Pump",
   "الرخصة": "License",
   "التأمين": "Insurance",
   "تصريح القيادة": "Driving Permit",
@@ -839,6 +867,7 @@ var state = {
   reportsDriverFilter: "",
   reportsDateFrom: "",
   reportsDateTo: "",
+  reportsRangeCarCode: "",
   reportsRangeError: "",
   compareSelectedCars: [],
   compareSortDir: "desc",
@@ -1121,14 +1150,17 @@ function getUninspectedVehicles() {
   return vehiclesCache.filter(function (code) { return !inspectedThisWeek[code]; });
 }
 
-function getInspectionsForRange(fromISO, toISO) {
+function getInspectionsForRange(fromISO, toISO, carCode) {
   if (!fromISO || !toISO) return [];
   function pad(n) { return String(n).padStart(2, "0"); }
+  var code = (carCode || "").trim().toLowerCase();
   var matches = inspectionsIndex.filter(function (it) {
     var d = it.dateTime ? new Date(it.dateTime) : null;
     if (!d || isNaN(d.getTime())) return false;
     var isoDate = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
-    return isoDate >= fromISO && isoDate <= toISO;
+    if (isoDate < fromISO || isoDate > toISO) return false;
+    if (code && (it.carCode || "").trim().toLowerCase() !== code) return false;
+    return true;
   });
   return matches
     .map(function (it) { return inspectionsCache[it.id]; })
@@ -1136,11 +1168,12 @@ function getInspectionsForRange(fromISO, toISO) {
     .sort(function (a, b) { return new Date(a.dateTime) - new Date(b.dateTime); });
 }
 
-function openBatchPrintRange(fromISO, toISO) {
-  var records = getInspectionsForRange(fromISO, toISO);
+function openBatchPrintRange(fromISO, toISO, carCode) {
+  var records = getInspectionsForRange(fromISO, toISO, carCode);
   if (records.length === 0) { state.reportsRangeError = "لا توجد فحوصات بهذه الفترة"; render(); return; }
   state.reportsRangeError = "";
-  state.printBatch = { date: fromISO, label: "فحوصات من " + formatDateOnly(fromISO) + " إلى " + formatDateOnly(toISO), records: records };
+  var label = "فحوصات " + (carCode ? "السيارة " + carCode + " " : "") + "من " + formatDateOnly(fromISO) + " إلى " + formatDateOnly(toISO);
+  state.printBatch = { date: fromISO, label: label, records: records };
   render();
 }
 
@@ -1335,6 +1368,11 @@ function renderReports() {
         '<div style="flex:1;min-width:0;"><label class="label">من تاريخ</label><input class="input" type="date" data-field="reportsDateFrom" value="' + escapeHtml(state.reportsDateFrom) + '" /></div>' +
         '<div style="flex:1;min-width:0;"><label class="label">إلى تاريخ</label><input class="input" type="date" data-field="reportsDateTo" value="' + escapeHtml(state.reportsDateTo) + '" /></div>' +
         "</div>" +
+        '<div style="margin-top:10px;"><label class="label">السيارة (اختياري)</label>' +
+        '<select class="input" data-field="reportsRangeCarCode">' +
+        '<option value="">كل السيارات</option>' +
+        vehiclesCache.slice().sort().map(function (code) { return '<option value="' + escapeHtml(code) + '"' + (state.reportsRangeCarCode === code ? " selected" : "") + ">" + escapeHtml(code) + "</option>"; }).join("") +
+        "</select></div>" +
         (state.reportsRangeError ? '<div style="color:#FF453A;font-size:12px;margin-top:8px;">' + escapeHtml(state.reportsRangeError) + "</div>" : "") +
         '<button type="button" class="btn-primary" data-action="print-range" style="width:100%;margin-top:12px;opacity:' + (state.reportsDateFrom && state.reportsDateTo ? "1" : "0.45") + ';" ' + (state.reportsDateFrom && state.reportsDateTo ? "" : "disabled") + '>استخراج وطباعة التقارير</button>' +
         "</div>"
@@ -1373,8 +1411,19 @@ function renderCompareSection() {
       var av = a.odo === null ? -Infinity : a.odo, bv = b.odo === null ? -Infinity : b.odo;
       return dir === "desc" ? bv - av : av - bv;
     });
+  function groupBtn(groupKey, label) {
+    return '<button type="button" data-action="select-compare-group" data-compare-group="' + groupKey + '" style="background:#2C2C2E;border:1px solid #38383A;border-radius:9px;padding:7px 12px;color:#FFFFFF;font-size:12px;font-weight:600;">' + label + "</button>";
+  }
   return '<div class="section"><div class="section-title">مقارنة عدادات السيارات</div>' +
-    '<div style="color:#8E8E93;font-size:12px;margin-bottom:10px;">اختر مجموعة سيارات لمقارنة آخر قراءة عداد مسجّلة لكل وحدة</div>' +
+    '<div style="color:#8E8E93;font-size:12px;margin-bottom:10px;">اختر مجموعة جاهزة، أو اختر سيارات بشكل حر من القائمة تحت، لمقارنة آخر قراءة عداد مسجّلة لكل وحدة</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">' +
+    groupBtn("daster", "مجموعة الداستر") +
+    groupBtn("kahraba", "مجموعة الكهرباء") +
+    groupBtn("rest", "باقي المركبات") +
+    groupBtn("all", "كل المركبات") +
+    groupBtn("none", "تفريغ الاختيار") +
+    "</div>" +
+    '<div style="color:#8E8E93;font-size:11.5px;margin-bottom:8px;">أو اختر سيارات بشكل حر:</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">' +
     vehicles.map(function (code) {
       var on = selected.indexOf(code) !== -1;
@@ -1811,8 +1860,8 @@ function renderAdminEditReport() {
 function renderPrintOverlay() {
   if (!state.printRecord) return "";
   var record = state.printRecord;
-  return '<div id="print-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
-    '<div style="width:100%;max-width:var(--print-max-width);max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
+  return '<div id="print-overlay" class="sheet-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
+    '<div class="sheet-panel" style="width:100%;max-width:var(--print-max-width);max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
     '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #38383A;">' +
     '<div style="color:#FFFFFF;font-size:15px;font-weight:700;">معاينة التقرير</div>' +
     '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
@@ -1831,8 +1880,8 @@ function renderBatchPrintOverlay() {
     var pageBreak = i < batch.records.length - 1 ? "page-break-after:always;" : "";
     return '<div style="' + pageBreak + (i > 0 ? "margin-top:14px;" : "") + '">' + renderReport(rec) + "</div>";
   }).join("");
-  return '<div id="print-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
-    '<div style="width:100%;max-width:var(--print-max-width);max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
+  return '<div id="print-overlay" class="sheet-overlay" style="position:fixed;inset:0;background:rgba(6,8,11,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;">' +
+    '<div class="sheet-panel" style="width:100%;max-width:var(--print-max-width);max-height:88vh;display:flex;flex-direction:column;background:#0F1319;border-radius:18px 18px 0 0;overflow:hidden;">' +
     '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #38383A;">' +
     '<div style="color:#FFFFFF;font-size:15px;font-weight:700;">' + (batch.label || ("فحوصات يوم " + formatDateOnly(batch.date))) + " (" + batch.records.length + ")</div>" +
     '<button type="button" class="btn-icon" data-action="close-print"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
@@ -1863,8 +1912,8 @@ function renderHomeMenu() {
     item("toggle-lang", '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20 15 15 0 010-20z"/></svg>', "اللغة", "En-Ar")
   ];
   var divider = '<div style="height:1px;background:#38383A;margin-right:52px;"></div>';
-  return '<div id="home-menu-overlay" data-action="close-home-menu" class="no-print" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:75;display:flex;align-items:flex-end;">' +
-    '<div style="width:100%;max-width:var(--app-max-width);margin:0 auto;background:#1C1C1E;border-radius:18px 18px 0 0;overflow:hidden;padding-bottom:env(safe-area-inset-bottom,0px);">' +
+  return '<div id="home-menu-overlay" data-action="close-home-menu" class="no-print sheet-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:75;display:flex;align-items:flex-end;">' +
+    '<div class="sheet-panel" style="width:100%;max-width:var(--app-max-width);margin:0 auto;background:#1C1C1E;border-radius:18px 18px 0 0;overflow:hidden;padding-bottom:env(safe-area-inset-bottom,0px);">' +
     '<div style="width:36px;height:4px;border-radius:2px;background:#48484A;margin:10px auto;"></div>' +
     rows.join(divider) +
     "</div></div>";
@@ -1937,7 +1986,7 @@ function openDetail(id) {
   render();
 }
 function goVehicles() { state.newVehicleCode = ""; state.vehicleError = ""; state.screen = "vehicles"; render(); }
-function goReports() { state.reportsCarQuery = ""; state.reportsDriverFilter = ""; state.reportsDateFrom = ""; state.reportsDateTo = ""; state.reportsRangeError = ""; state.compareSelectedCars = []; state.compareSortDir = "desc"; state.screen = "reports"; render(); }
+function goReports() { state.reportsCarQuery = ""; state.reportsDriverFilter = ""; state.reportsDateFrom = ""; state.reportsDateTo = ""; state.reportsRangeCarCode = ""; state.reportsRangeError = ""; state.compareSelectedCars = []; state.compareSortDir = "desc"; state.screen = "reports"; render(); }
 
 /* -------------------- Admin -------------------- */
 function goAdmin() {
@@ -2466,7 +2515,16 @@ document.addEventListener("DOMContentLoaded", function () {
       render();
     }
     else if (action === "toggle-compare-sort") { state.compareSortDir = state.compareSortDir === "desc" ? "asc" : "desc"; render(); }
-    else if (action === "print-range") { if (state.reportsDateFrom && state.reportsDateTo) openBatchPrintRange(state.reportsDateFrom, state.reportsDateTo); }
+    else if (action === "select-compare-group") {
+      var g = t.dataset.compareGroup;
+      if (g === "daster") state.compareSelectedCars = COMPARE_GROUP_DASTER.filter(function (c) { return vehiclesCache.indexOf(c) !== -1; });
+      else if (g === "kahraba") state.compareSelectedCars = COMPARE_GROUP_KAHRABA.filter(function (c) { return vehiclesCache.indexOf(c) !== -1; });
+      else if (g === "rest") state.compareSelectedCars = vehiclesCache.filter(function (c) { return COMPARE_GROUP_DASTER.indexOf(c) === -1 && COMPARE_GROUP_KAHRABA.indexOf(c) === -1; });
+      else if (g === "all") state.compareSelectedCars = vehiclesCache.slice();
+      else if (g === "none") state.compareSelectedCars = [];
+      render();
+    }
+    else if (action === "print-range") { if (state.reportsDateFrom && state.reportsDateTo) openBatchPrintRange(state.reportsDateFrom, state.reportsDateTo, state.reportsRangeCarCode); }
     else if (action === "clear-home-date") { state.homeDate = ""; render(); }
     else if (action === "print-day") openBatchPrint(state.homeDate);
     else if (action === "add-vehicle") handleAddVehicle();
@@ -2571,6 +2629,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (field === "homeDate") { state.homeDate = t.value; render(); return; }
     if (field === "reportsDateFrom") { state.reportsDateFrom = t.value; state.reportsRangeError = ""; render(); return; }
     if (field === "reportsDateTo") { state.reportsDateTo = t.value; state.reportsRangeError = ""; render(); return; }
+    if (field === "reportsRangeCarCode") { state.reportsRangeCarCode = t.value; state.reportsRangeError = ""; render(); return; }
     if (field === "newVehicleCode") { t.value = t.value.replace(/[^0-9]/g, ""); state.newVehicleCode = t.value; return; }
     if (field === "carCode") { t.value = t.value.replace(/[^0-9]/g, ""); activeDraft().carCode = t.value; return; }
     if (field === "odometer") { t.value = t.value.replace(/[^0-9]/g, ""); activeDraft().odometer = t.value; return; }
