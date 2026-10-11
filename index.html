@@ -588,6 +588,8 @@ var I18N_EXACT = {
   "رمز السيارة": "Car Code",
   "عداد السيارة الحالي": "Current Odometer",
   "عداد السيارة": "Odometer",
+  "كم": "km",
+  "ضرر": "damage(s)",
   "صور الأضرار": "Damage Photos",
   "مساعدة": "Help",
   "المزيد": "More",
@@ -642,8 +644,8 @@ var I18N_EXACT = {
   "السيارة (اختياري)": "Vehicle (optional)",
   "كل السيارات": "All vehicles",
   "لمحة سريعة": "Quick Glance",
-  "ابحث باسم الفاحص أو رقم السيارة": "Search by inspector name or vehicle number",
-  "جرّب اسم فاحص أو رقم سيارة مختلف": "Try a different inspector name or vehicle number",
+  "ابحث برقم السيارة": "Search by vehicle number",
+  "جرّب رقم سيارة مختلف": "Try a different vehicle number",
   "الأكثر أضرارًا (آخر فحص)": "Most Damaged (Last Inspection)",
   "أكثر سيارة كهرباء ماشية": "Top Electric Mileage",
   "أكثر داستر ماشية": "Top Duster Mileage",
@@ -795,7 +797,9 @@ var I18N_REGEX = [
   [/^بتاريخ: (.+) — الوقت: (.+)$/, function (m) { return "Date: " + m[1] + " — Time: " + m[2]; }],
   [/^تم تأكيد الهوية عبر الرمز الشخصي بتاريخ (.+)$/, function (m) { return "Identity confirmed via personal code on " + m[1]; }],
   [/^✔ تم تأكيد الهوية عبر الرمز الشخصي لـ$/, function () { return "✔ Identity confirmed via personal code for"; }],
-  [/^هل أنت متأكد من حذف المركبة "(.+)"؟$/, function (m) { return 'Are you sure you want to delete vehicle "' + m[1] + '"?'; }]
+  [/^هل أنت متأكد من حذف المركبة "(.+)"؟$/, function (m) { return 'Are you sure you want to delete vehicle "' + m[1] + '"?'; }],
+  [/^([\d,]+) كم$/, function (m) { return m[1] + " km"; }],
+  [/^(\d+) سيارة لسا ما انفحصت هذا الأسبوع$/, function (m) { return m[1] + " vehicle(s) not yet inspected this week"; }]
 ];
 
 // Translates a whole string (used for window.confirm/alert dialogs).
@@ -1238,11 +1242,11 @@ function renderHome() {
   var mainContent;
   if (q) {
     var matches = inspectionsIndex.filter(function (it) {
-      return (it.carCode || "").toLowerCase().indexOf(q) !== -1 || (it.driver || "").toLowerCase().indexOf(q) !== -1;
+      return (it.carCode || "").toLowerCase().indexOf(q) !== -1;
     });
     mainContent = '<div style="padding:4px 18px;">' +
       (matches.length === 0
-        ? '<div class="section" style="text-align:center;padding:32px 16px;"><div style="color:#FFFFFF;font-size:14px;margin-bottom:4px;">لا توجد نتائج مطابقة</div><div style="color:#8E8E93;font-size:12px;">جرّب اسم فاحص أو رقم سيارة مختلف</div></div>'
+        ? '<div class="section" style="text-align:center;padding:32px 16px;"><div style="color:#FFFFFF;font-size:14px;margin-bottom:4px;">لا توجد نتائج مطابقة</div><div style="color:#8E8E93;font-size:12px;">جرّب رقم سيارة مختلف</div></div>'
         : matches.map(function (it) {
             var sevLabel = it.damageCount === 0 ? "سليمة" : it.damageCount + " ملاحظات";
             return '<div class="section" data-action="open-detail" data-id="' + it.id + '" style="margin-bottom:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
@@ -1267,7 +1271,7 @@ function renderHome() {
     '<button type="button" class="btn-icon no-print" data-action="toggle-home-menu" title="المزيد"><svg width="22" height="22" viewBox="0 0 24 24" fill="#8E8E93" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>' +
     "</div></div>" +
     cloudBanner +
-    '<div style="padding:0 18px 12px;"><input class="input" id="home-search" value="' + escapeHtml(state.homeQuery) + '" placeholder="ابحث باسم الفاحص أو رقم السيارة" /></div>' +
+    '<div style="padding:0 18px 12px;"><input class="input" id="home-search" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(state.homeQuery) + '" placeholder="ابحث برقم السيارة" /></div>' +
     mainContent +
     '<button type="button" data-action="go-new" class="btn-primary" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:min(90%,420px);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 30px -8px rgba(79,217,198,0.5);">' +
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> فحص جديد</button>' +
@@ -2659,6 +2663,7 @@ document.addEventListener("DOMContentLoaded", function () {
   app.addEventListener("input", function (e) {
     var t = e.target;
     if (t.id === "home-search") {
+      t.value = t.value.replace(/[^0-9]/g, "");
       state.homeQuery = t.value;
       var selStart = t.selectionStart, selEnd = t.selectionEnd;
       render();
