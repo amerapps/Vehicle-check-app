@@ -81,7 +81,7 @@
   @media print {
     #screen-root { display: none !important; }
     #print-overlay { position: static !important; inset: auto !important; background: none !important; display: block !important; height: auto !important; }
-    #print-overlay > div { max-width: none !important; max-height: none !important; overflow: visible !important; background: none !important; border-radius: 0 !important; }
+    #print-overlay > div { position: static !important; inset: auto !important; top: auto !important; bottom: auto !important; right: auto !important; left: auto !important; width: 100% !important; height: auto !important; max-width: none !important; max-height: none !important; overflow: visible !important; background: none !important; border-radius: 0 !important; margin: 0 !important; }
     .no-print { display: none !important; }
     .print-scrollwrap { padding: 0 !important; overflow: visible !important; }
     #print-area { width: 100%; }
@@ -641,7 +641,10 @@ var I18N_EXACT = {
   "كل المركبات": "All Vehicles",
   "السيارة (اختياري)": "Vehicle (optional)",
   "كل السيارات": "All vehicles",
-  "📊 لمحة سريعة": "📊 Quick Glance",
+  "لمحة سريعة": "Quick Glance",
+  "ابحث باسم الفاحص أو رقم السيارة": "Search by inspector name or vehicle number",
+  "جرّب اسم فاحص أو رقم سيارة مختلف": "Try a different inspector name or vehicle number",
+  "الأكثر أضرارًا (آخر فحص)": "Most Damaged (Last Inspection)",
   "أكثر سيارة كهرباء ماشية": "Top Electric Mileage",
   "أكثر داستر ماشية": "Top Duster Mileage",
   "الأكثر مشوارًا من الكل": "Top Overall Mileage",
@@ -1190,28 +1193,36 @@ function renderStatsInfographic() {
   var topDamage = topByDamageCount();
 
   function card(opts) {
-    var hasData = opts.value !== null;
+    var hasData = opts.hero !== null;
     return '<div' + (hasData ? ' data-action="go-reports-car" data-code="' + escapeHtml(opts.code) + '"' : "") +
-      ' style="background:linear-gradient(155deg,' + opts.c1 + "," + opts.c2 + ');border-radius:16px;padding:14px;position:relative;overflow:hidden;' + (hasData ? "cursor:pointer;" : "opacity:0.5;") + '">' +
-      '<div style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;margin-bottom:10px;">' + opts.icon + "</div>" +
-      '<div style="color:rgba(255,255,255,0.85);font-size:11px;font-weight:600;margin-bottom:2px;">' + opts.title + "</div>" +
-      '<div style="color:#FFFFFF;font-size:19px;font-weight:800;">' + (hasData ? escapeHtml(opts.code) : "—") + "</div>" +
-      '<div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:2px;">' + (hasData ? opts.value : "لا توجد بيانات") + "</div>" +
+      ' style="background:#1C1C1E;border:1px solid #2C2C2E;border-radius:16px;padding:13px;' + (hasData ? "cursor:pointer;" : "") + '">' +
+      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:10px;">' +
+      '<div style="width:24px;height:24px;border-radius:50%;background:' + opts.color + '26;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + opts.icon + "</div>" +
+      '<span style="color:#8E8E93;font-size:11px;font-weight:600;line-height:1.3;">' + opts.title + "</span>" +
+      "</div>" +
+      '<div style="display:flex;align-items:baseline;gap:4px;">' +
+      '<span style="color:#FFFFFF;font-size:23px;font-weight:800;letter-spacing:-0.3px;">' + (hasData ? opts.hero : "—") + "</span>" +
+      (hasData && opts.unit ? '<span style="color:#8E8E93;font-size:11.5px;font-weight:700;">' + opts.unit + "</span>" : "") +
+      "</div>" +
+      '<div style="color:' + (hasData ? "#636366" : "#48484A") + ';font-size:11px;margin-top:4px;">' + (hasData ? "🚗 " + escapeHtml(opts.code) : "لا توجد بيانات") + "</div>" +
       "</div>";
   }
 
-  var bolt = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>';
-  var truck = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg>';
-  var trophy = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/><path d="M7 5H3v2a4 4 0 004 4M17 5h4v2a4 4 0 01-4 4"/></svg>';
-  var warn = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 2L1 21h22L12 2z"/><path d="M12 9v5M12 17h.01"/></svg>';
+  function icon(color, path, isFill) {
+    return '<svg width="13" height="13" viewBox="0 0 24 24" fill="' + (isFill ? color : "none") + '" stroke="' + (isFill ? "none" : color) + '" stroke-width="2.2">' + path + "</svg>";
+  }
+  var bolt = icon("#0A84FF", '<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>', true);
+  var truck = icon("#FF9F0A", '<path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/>', false);
+  var trophy = icon("#FFD60A", '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/><path d="M7 5H3v2a4 4 0 004 4M17 5h4v2a4 4 0 01-4 4"/>', false);
+  var warn = icon("#FF453A", '<path d="M12 2L1 21h22L12 2z"/><path d="M12 9v5M12 17h.01"/>', false);
 
   return '<div style="padding:4px 18px 8px;">' +
-    '<div style="color:#8E8E93;font-size:12px;font-weight:700;margin:4px 2px 10px;">📊 لمحة سريعة</div>' +
+    '<div style="color:#FFFFFF;font-size:15px;font-weight:800;margin:4px 2px 10px;">لمحة سريعة</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
-    card({ title: "أكثر سيارة كهرباء ماشية", icon: bolt, code: topKahraba && topKahraba.code, value: topKahraba ? topKahraba.odo.toLocaleString("en-US") + " كم" : null, c1: "#0A84FF", c2: "#004FBD" }) +
-    card({ title: "أكثر داستر ماشية", icon: truck, code: topDaster && topDaster.code, value: topDaster ? topDaster.odo.toLocaleString("en-US") + " كم" : null, c1: "#FF9F0A", c2: "#C06800" }) +
-    card({ title: "الأكثر مشوارًا من الكل", icon: trophy, code: topOverall && topOverall.code, value: topOverall ? topOverall.odo.toLocaleString("en-US") + " كم" : null, c1: "#30D158", c2: "#1A8A3A" }) +
-    card({ title: "الأكثر أضرارًا", icon: warn, code: topDamage && topDamage.code, value: topDamage ? topDamage.count + " ضرر مسجّل" : null, c1: "#FF453A", c2: "#A4201A" }) +
+    card({ title: "أكثر سيارة كهرباء ماشية", icon: bolt, color: "#0A84FF", code: topKahraba && topKahraba.code, hero: topKahraba ? topKahraba.odo.toLocaleString("en-US") : null, unit: "كم" }) +
+    card({ title: "أكثر داستر ماشية", icon: truck, color: "#FF9F0A", code: topDaster && topDaster.code, hero: topDaster ? topDaster.odo.toLocaleString("en-US") : null, unit: "كم" }) +
+    card({ title: "الأكثر مشوارًا من الكل", icon: trophy, color: "#FFD60A", code: topOverall && topOverall.code, hero: topOverall ? topOverall.odo.toLocaleString("en-US") : null, unit: "كم" }) +
+    card({ title: "الأكثر أضرارًا (آخر فحص)", icon: warn, color: "#FF453A", code: topDamage && topDamage.code, hero: topDamage ? topDamage.count : null, unit: "ضرر" }) +
     "</div></div>";
 }
 
@@ -1223,6 +1234,30 @@ function renderHome() {
     cloudBanner = '<div style="margin:0 18px 10px;background:#1C1C1E;border:1px solid #38383A;border-radius:10px;padding:10px 12px;color:#8E8E93;font-size:11.5px;display:flex;align-items:center;gap:8px;"><span class="spin">⟳</span> جاري الاتصال بالخدمة السحابية...</div>';
   }
 
+  var q = state.homeQuery.trim().toLowerCase();
+  var mainContent;
+  if (q) {
+    var matches = inspectionsIndex.filter(function (it) {
+      return (it.carCode || "").toLowerCase().indexOf(q) !== -1 || (it.driver || "").toLowerCase().indexOf(q) !== -1;
+    });
+    mainContent = '<div style="padding:4px 18px;">' +
+      (matches.length === 0
+        ? '<div class="section" style="text-align:center;padding:32px 16px;"><div style="color:#FFFFFF;font-size:14px;margin-bottom:4px;">لا توجد نتائج مطابقة</div><div style="color:#8E8E93;font-size:12px;">جرّب اسم فاحص أو رقم سيارة مختلف</div></div>'
+        : matches.map(function (it) {
+            var sevLabel = it.damageCount === 0 ? "سليمة" : it.damageCount + " ملاحظات";
+            return '<div class="section" data-action="open-detail" data-id="' + it.id + '" style="margin-bottom:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
+              '<div style="flex:1;min-width:0;">' +
+              '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#FFFFFF;font-size:15px;font-weight:700;">' + escapeHtml(it.carCode || "بدون رمز") + '</span>' +
+              '<span style="font-size:11px;color:' + it.badgeColor + ";background:" + it.badgeColor + '1F;padding:2px 8px;border-radius:999px;">' + sevLabel + "</span></div>" +
+              '<div style="color:#8E8E93;font-size:12px;"><span>' + escapeHtml(it.driver || "—") + "</span> · <span>" + escapeHtml(it.place || "—") + "</span></div>" +
+              '<div style="color:#636366;font-size:11px;margin-top:2px;">' + formatDT(it.dateTime) + "</div></div>" +
+              '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2" style="transform:rotate(180deg);"><path d="M9 6l6 6-6 6"/></svg></div>';
+          }).join("")) +
+      "</div>";
+  } else {
+    mainContent = renderStatsInfographic();
+  }
+
   return '<div style="padding-bottom:90px;">' +
     '<div style="padding:22px 18px 8px;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">' +
     '<div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#0A84FF,#0060DF);display:flex;align-items:center;justify-content:center;">' +
@@ -1232,7 +1267,8 @@ function renderHome() {
     '<button type="button" class="btn-icon no-print" data-action="toggle-home-menu" title="المزيد"><svg width="22" height="22" viewBox="0 0 24 24" fill="#8E8E93" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>' +
     "</div></div>" +
     cloudBanner +
-    renderStatsInfographic() +
+    '<div style="padding:0 18px 12px;"><input class="input" id="home-search" value="' + escapeHtml(state.homeQuery) + '" placeholder="ابحث باسم الفاحص أو رقم السيارة" /></div>' +
+    mainContent +
     '<button type="button" data-action="go-new" class="btn-primary" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:min(90%,420px);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 30px -8px rgba(79,217,198,0.5);">' +
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> فحص جديد</button>' +
     "</div>";
@@ -2291,14 +2327,19 @@ function topByOdometer(codes) {
   return best;
 }
 function topByDamageCount() {
-  var totals = {};
+  // Each car's most recent inspection only — not a cumulative total across its history.
+  var latestByCar = {};
   inspectionsIndex.forEach(function (it) {
-    if (!it.carCode) return;
-    totals[it.carCode] = (totals[it.carCode] || 0) + (it.damageCount || 0);
+    if (!it.carCode || !it.dateTime) return;
+    var t = new Date(it.dateTime).getTime();
+    if (isNaN(t)) return;
+    var cur = latestByCar[it.carCode];
+    if (!cur || t > cur.time) latestByCar[it.carCode] = { time: t, count: it.damageCount || 0 };
   });
   var best = null;
-  Object.keys(totals).forEach(function (code) {
-    if (totals[code] > 0 && (best === null || totals[code] > best.count)) best = { code: code, count: totals[code] };
+  Object.keys(latestByCar).forEach(function (code) {
+    var c = latestByCar[code].count;
+    if (c > 0 && (best === null || c > best.count)) best = { code: code, count: c };
   });
   return best;
 }
