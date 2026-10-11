@@ -42,8 +42,6 @@
   @media (min-width: 700px) {
     :root { --app-max-width: 900px; --print-max-width: 820px; }
     .ck-grid { grid-template-columns: repeat(3, 1fr) !important; }
-    .home-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
-    .home-list > .section { margin-bottom: 0 !important; }
     /* Bottom sheets (the ⋯ menu, print previews) dock to the screen's right edge
        as a tall side panel instead of a centered strip, so they use the extra
        desktop width instead of wasting it either side. */
@@ -643,6 +641,12 @@ var I18N_EXACT = {
   "كل المركبات": "All Vehicles",
   "السيارة (اختياري)": "Vehicle (optional)",
   "كل السيارات": "All vehicles",
+  "📊 لمحة سريعة": "📊 Quick Glance",
+  "أكثر سيارة كهرباء ماشية": "Top Electric Mileage",
+  "أكثر داستر ماشية": "Top Duster Mileage",
+  "الأكثر مشوارًا من الكل": "Top Overall Mileage",
+  "الأكثر أضرارًا": "Most Damaged",
+  "لا توجد بيانات": "No data",
   "تفريغ الاختيار": "Clear Selection",
   "اختر سيارتين أو أكثر من فوق لعرض المقارنة": "Select two or more vehicles above to see the comparison",
   "الأكثر ← الأقل": "Highest → Lowest",
@@ -1177,39 +1181,41 @@ function openBatchPrintRange(fromISO, toISO, carCode) {
   render();
 }
 
-function renderHome() {
-  var index = inspectionsIndex;
-  var q = state.homeQuery.trim().toLowerCase();
-  var filtered = index.filter(function (it) {
-    if (q && (it.carCode || "").toLowerCase().indexOf(q) < 0 && (it.driver || "").toLowerCase().indexOf(q) < 0 && (it.place || "").toLowerCase().indexOf(q) < 0) return false;
-    if (state.homeDate) {
-      var d = it.dateTime ? new Date(it.dateTime) : null;
-      if (!d || isNaN(d.getTime())) return false;
-      function pad(n) { return String(n).padStart(2, "0"); }
-      var isoDate = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
-      if (isoDate !== state.homeDate) return false;
-    }
-    return true;
-  });
+function renderStatsInfographic() {
+  var registeredKahraba = COMPARE_GROUP_KAHRABA.filter(function (c) { return vehiclesCache.indexOf(c) !== -1; });
+  var registeredDaster = COMPARE_GROUP_DASTER.filter(function (c) { return vehiclesCache.indexOf(c) !== -1; });
+  var topKahraba = topByOdometer(registeredKahraba);
+  var topDaster = topByOdometer(registeredDaster);
+  var topOverall = topByOdometer(vehiclesCache);
+  var topDamage = topByDamageCount();
 
-  var listHtml;
-  if (filtered.length === 0) {
-    listHtml = '<div class="section" style="text-align:center;padding:32px 16px;">' +
-      '<div style="color:#FFFFFF;font-size:14px;margin-bottom:4px;">' + (index.length === 0 ? "لا يوجد فحوصات بعد" : "لا توجد نتائج مطابقة") + "</div>" +
-      '<div style="color:#8E8E93;font-size:12px;">' + (index.length === 0 ? "ابدأ بإنشاء أول فحص لسيارة" : "جرّب كلمات بحث أو تاريخ مختلف") + "</div></div>";
-  } else {
-    listHtml = filtered.map(function (it) {
-      var sevLabel = it.damageCount === 0 ? "سليمة" : it.damageCount + " ملاحظات";
-      return '<div class="section" data-action="open-detail" data-id="' + it.id + '" style="margin-bottom:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
-        '<div style="flex:1;min-width:0;">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#FFFFFF;font-size:15px;font-weight:700;">' + escapeHtml(it.carCode || "بدون رمز") + '</span>' +
-        '<span style="font-size:11px;color:' + it.badgeColor + ";background:" + it.badgeColor + '1F;padding:2px 8px;border-radius:999px;">' + sevLabel + "</span></div>" +
-        '<div style="color:#8E8E93;font-size:12px;"><span>' + escapeHtml(it.driver || "—") + "</span> · <span>" + escapeHtml(it.place || "—") + "</span></div>" +
-        '<div style="color:#636366;font-size:11px;margin-top:2px;">' + formatDT(it.dateTime) + "</div></div>" +
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2" style="transform:rotate(180deg);"><path d="M9 6l6 6-6 6"/></svg></div>';
-    }).join("");
+  function card(opts) {
+    var hasData = opts.value !== null;
+    return '<div' + (hasData ? ' data-action="go-reports-car" data-code="' + escapeHtml(opts.code) + '"' : "") +
+      ' style="background:linear-gradient(155deg,' + opts.c1 + "," + opts.c2 + ');border-radius:16px;padding:14px;position:relative;overflow:hidden;' + (hasData ? "cursor:pointer;" : "opacity:0.5;") + '">' +
+      '<div style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;margin-bottom:10px;">' + opts.icon + "</div>" +
+      '<div style="color:rgba(255,255,255,0.85);font-size:11px;font-weight:600;margin-bottom:2px;">' + opts.title + "</div>" +
+      '<div style="color:#FFFFFF;font-size:19px;font-weight:800;">' + (hasData ? escapeHtml(opts.code) : "—") + "</div>" +
+      '<div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:2px;">' + (hasData ? opts.value : "لا توجد بيانات") + "</div>" +
+      "</div>";
   }
 
+  var bolt = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>';
+  var truck = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M5 17h14M5 17a2 2 0 104 0M5 17a2 2 0 114 0M15 17a2 2 0 104 0M15 17a2 2 0 114 0M3 17V11l2-5h14l2 5v6"/></svg>';
+  var trophy = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z"/><path d="M7 5H3v2a4 4 0 004 4M17 5h4v2a4 4 0 01-4 4"/></svg>';
+  var warn = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 2L1 21h22L12 2z"/><path d="M12 9v5M12 17h.01"/></svg>';
+
+  return '<div style="padding:4px 18px 8px;">' +
+    '<div style="color:#8E8E93;font-size:12px;font-weight:700;margin:4px 2px 10px;">📊 لمحة سريعة</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+    card({ title: "أكثر سيارة كهرباء ماشية", icon: bolt, code: topKahraba && topKahraba.code, value: topKahraba ? topKahraba.odo.toLocaleString("en-US") + " كم" : null, c1: "#0A84FF", c2: "#004FBD" }) +
+    card({ title: "أكثر داستر ماشية", icon: truck, code: topDaster && topDaster.code, value: topDaster ? topDaster.odo.toLocaleString("en-US") + " كم" : null, c1: "#FF9F0A", c2: "#C06800" }) +
+    card({ title: "الأكثر مشوارًا من الكل", icon: trophy, code: topOverall && topOverall.code, value: topOverall ? topOverall.odo.toLocaleString("en-US") + " كم" : null, c1: "#30D158", c2: "#1A8A3A" }) +
+    card({ title: "الأكثر أضرارًا", icon: warn, code: topDamage && topDamage.code, value: topDamage ? topDamage.count + " ضرر مسجّل" : null, c1: "#FF453A", c2: "#A4201A" }) +
+    "</div></div>";
+}
+
+function renderHome() {
   var cloudBanner = "";
   if (cloudError) {
     cloudBanner = '<div style="margin:0 18px 10px;background:#2A1518;border:1px solid #5C2530;border-radius:10px;padding:10px 12px;color:#F0899A;font-size:11.5px;">⚠ ' + escapeHtml(cloudError) + "</div>";
@@ -1226,18 +1232,7 @@ function renderHome() {
     '<button type="button" class="btn-icon no-print" data-action="toggle-home-menu" title="المزيد"><svg width="22" height="22" viewBox="0 0 24 24" fill="#8E8E93" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>' +
     "</div></div>" +
     cloudBanner +
-    '<div style="padding:12px 18px;display:flex;gap:8px;">' +
-    '<input class="input" id="home-search" value="' + escapeHtml(state.homeQuery) + '" placeholder="ابحث برمز السيارة، المكان، أو الفاحص" style="flex:1;" />' +
-    '<input class="input" type="date" data-field="homeDate" value="' + escapeHtml(state.homeDate) + '" title="التقويم — الرجوع لفحص قديم" style="width:150px;flex-shrink:0;" />' +
-    "</div>" +
-    (state.homeDate ? '<div style="padding:0 18px 8px;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
-      (filtered.length
-        ? '<button type="button" data-action="print-day" style="background:#1C1C1E;border:1px solid #38383A;color:#0A84FF;font-size:12px;font-weight:700;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:6px;">' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>' +
-          "طباعة / حفظ فحوصات هذا اليوم (" + filtered.length + ")</button>"
-        : "<div></div>") +
-      '<button type="button" data-action="clear-home-date" style="background:none;border:none;color:#636366;font-size:11.5px;text-decoration:underline;white-space:nowrap;">مسح فلتر التاريخ (' + formatDateOnly(state.homeDate) + ")</button></div>" : "") +
-    '<div class="home-list" style="padding:4px 18px;">' + listHtml + "</div>" +
+    renderStatsInfographic() +
     '<button type="button" data-action="go-new" class="btn-primary" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:min(90%,420px);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 30px -8px rgba(79,217,198,0.5);">' +
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> فحص جديد</button>' +
     "</div>";
@@ -2287,6 +2282,26 @@ function buildRecord() {
   };
 }
 
+function topByOdometer(codes) {
+  var best = null;
+  codes.forEach(function (code) {
+    var odo = getLatestOdometerForCar(code);
+    if (odo !== null && (best === null || odo > best.odo)) best = { code: code, odo: odo };
+  });
+  return best;
+}
+function topByDamageCount() {
+  var totals = {};
+  inspectionsIndex.forEach(function (it) {
+    if (!it.carCode) return;
+    totals[it.carCode] = (totals[it.carCode] || 0) + (it.damageCount || 0);
+  });
+  var best = null;
+  Object.keys(totals).forEach(function (code) {
+    if (totals[code] > 0 && (best === null || totals[code] > best.count)) best = { code: code, count: totals[code] };
+  });
+  return best;
+}
 function getLatestOdometerForCar(carCode) {
   var code = (carCode || "").trim().toLowerCase();
   var best = null, bestTime = -Infinity;
@@ -2551,6 +2566,7 @@ document.addEventListener("DOMContentLoaded", function () {
     else if (action === "do-print") doPrint();
     else if (action === "do-print-batch") doPrintBatch();
     else if (action === "go-admin") goAdmin();
+    else if (action === "go-reports-car") { goReports(); state.reportsCarQuery = t.dataset.code; render(); }
     else if (action === "toggle-uninspected-alert") {
       state.uninspectedAlertEnabled = !state.uninspectedAlertEnabled;
       try { localStorage.setItem("vi_uninspected_alert", state.uninspectedAlertEnabled ? "1" : "0"); } catch (e) {}
