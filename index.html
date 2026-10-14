@@ -646,6 +646,9 @@ var I18N_EXACT = {
   "لمحة سريعة": "Quick Glance",
   "ابحث برقم السيارة": "Search by vehicle number",
   "جرّب رقم سيارة مختلف": "Try a different vehicle number",
+  "جرّب رقم سيارة أو تاريخ مختلف": "Try a different vehicle number or date",
+  "سيارة انفحصت": "vehicles inspected",
+  "سيارة لسا ما انفحصت": "vehicles not yet inspected",
   "الأكثر أضرارًا (آخر فحص)": "Most Damaged (Last Inspection)",
   "أكثر سيارة كهرباء ماشية": "Top Electric Mileage",
   "أكثر داستر ماشية": "Top Duster Mileage",
@@ -1239,14 +1242,32 @@ function renderHome() {
   }
 
   var q = state.homeQuery.trim().toLowerCase();
+  var hd = state.homeDate;
   var mainContent;
-  if (q) {
+  if (q || hd) {
     var matches = inspectionsIndex.filter(function (it) {
-      return (it.carCode || "").toLowerCase().indexOf(q) !== -1;
+      if (q && (it.carCode || "").toLowerCase().indexOf(q) === -1) return false;
+      if (hd) {
+        var d = it.dateTime ? new Date(it.dateTime) : null;
+        if (!d || isNaN(d.getTime())) return false;
+        if (isoDateOf(d) !== hd) return false;
+      }
+      return true;
     });
-    mainContent = '<div style="padding:4px 18px;">' +
+    var adminDateNote = "";
+    if (hd && state.adminUnlocked) {
+      var inspectedCars = {};
+      matches.forEach(function (it) { if (it.carCode) inspectedCars[it.carCode] = true; });
+      var inspectedCount = Object.keys(inspectedCars).length;
+      var notInspectedCount = Math.max(0, vehiclesCache.length - inspectedCount);
+      adminDateNote = '<div style="margin:0 18px 10px;background:#1C1C1E;border:1px solid #38383A;border-radius:10px;padding:10px 12px;display:flex;gap:14px;">' +
+        '<div><div style="color:#30D158;font-size:16px;font-weight:800;">' + inspectedCount + '</div><div style="color:#8E8E93;font-size:11px;">سيارة انفحصت</div></div>' +
+        '<div><div style="color:#FF9F0A;font-size:16px;font-weight:800;">' + notInspectedCount + '</div><div style="color:#8E8E93;font-size:11px;">سيارة لسا ما انفحصت</div></div>' +
+        "</div>";
+    }
+    mainContent = adminDateNote + '<div style="padding:4px 18px;">' +
       (matches.length === 0
-        ? '<div class="section" style="text-align:center;padding:32px 16px;"><div style="color:#FFFFFF;font-size:14px;margin-bottom:4px;">لا توجد نتائج مطابقة</div><div style="color:#8E8E93;font-size:12px;">جرّب رقم سيارة مختلف</div></div>'
+        ? '<div class="section" style="text-align:center;padding:32px 16px;"><div style="color:#FFFFFF;font-size:14px;margin-bottom:4px;">لا توجد نتائج مطابقة</div><div style="color:#8E8E93;font-size:12px;">جرّب رقم سيارة أو تاريخ مختلف</div></div>'
         : matches.map(function (it) {
             var sevLabel = it.damageCount === 0 ? "سليمة" : it.damageCount + " ملاحظات";
             return '<div class="section" data-action="open-detail" data-id="' + it.id + '" style="margin-bottom:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">' +
@@ -1271,7 +1292,11 @@ function renderHome() {
     '<button type="button" class="btn-icon no-print" data-action="toggle-home-menu" title="المزيد"><svg width="22" height="22" viewBox="0 0 24 24" fill="#8E8E93" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>' +
     "</div></div>" +
     cloudBanner +
-    '<div style="padding:0 18px 12px;"><input class="input" id="home-search" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(state.homeQuery) + '" placeholder="ابحث برقم السيارة" /></div>' +
+    '<div style="padding:0 18px 8px;display:flex;gap:8px;">' +
+    '<input class="input" id="home-search" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(state.homeQuery) + '" placeholder="ابحث برقم السيارة" style="flex:1;" />' +
+    '<input class="input" type="date" data-field="homeDate" value="' + escapeHtml(state.homeDate) + '" title="التقويم — لمعرفة السيارات المفحوصة بتاريخ معيّن" style="width:150px;flex-shrink:0;" />' +
+    "</div>" +
+    (state.homeDate ? '<div style="padding:0 18px 8px;text-align:left;"><button type="button" data-action="clear-home-date" style="background:none;border:none;color:#636366;font-size:11.5px;text-decoration:underline;">مسح فلتر التاريخ (' + formatDateOnly(state.homeDate) + ")</button></div>" : "") +
     mainContent +
     '<button type="button" data-action="go-new" class="btn-primary" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:min(90%,420px);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 30px -8px rgba(79,217,198,0.5);">' +
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> فحص جديد</button>' +
