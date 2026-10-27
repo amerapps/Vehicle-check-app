@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta name="theme-color" content="#000000" />
-<meta name="app-version" content="1.1 (2026-10-27)" />
+<meta name="app-version" content="1.2 (2026-10-27)" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -99,10 +99,11 @@
 
 /* =================================================================
    Version (bump these two lines with every release)
-   1.1  2026-10-27  تاريخ صنع الإطارات (أسبوع/سنة) لكل إطار + ترتيب
-                    السيارات حسب عمر الإطارات (للأدمن) + رقم الإصدار
+   1.1  2026-10-27  تاريخ صنع الإطارات + ترتيب السيارات حسب عمر الإطارات
+                    (للأدمن) + رقم الإصدار
+   1.2  2026-10-27  تاريخ صنع الإطار صار خانة واحدة للسيارة (أسبوع/سنة)
 ================================================================= */
-var APP_VERSION = "1.1";
+var APP_VERSION = "1.2";
 var APP_VERSION_DATE = "2026-10-27";
 try { console.info("Vehicle Inspection app v" + APP_VERSION + " (" + APP_VERSION_DATE + ")"); } catch (e) {}
 
@@ -116,15 +117,7 @@ var TYPE_INFO = {
   O: { label: "أخرى (Other)", color: "#8E8E93", textColor: "#FFFFFF" }
 };
 
-// Tire manufacture date (DOT code: week + year) — one entry per tire.
-// "spare" is stored but NOT counted when ranking cars by tire age.
-var TIRE_POSITIONS = [
-  { key: "fr", label: "أمامي يمين" },
-  { key: "fl", label: "أمامي يسار" },
-  { key: "rr", label: "خلفي يمين" },
-  { key: "rl", label: "خلفي يسار" },
-  { key: "spare", label: "الاحتياطي" }
-];
+// Tire manufacture date (DOT code: week + year) — ONE date per car.
 // false = every inspector can enter tire dates (the ranking is always admin-only).
 // true  = only a logged-in admin sees/enters tire dates at all.
 var TIRE_DATE_ADMIN_ONLY = false;
@@ -374,19 +367,30 @@ function randomFourDigitCode() {
 }
 
 /* =================================================================
-   Tire manufacture dates (DOT week/year)
+   Tire manufacture date (DOT week/year) — one date per car
 ================================================================= */
-function emptyTireDates() {
-  var o = {};
-  TIRE_POSITIONS.forEach(function (p) { o[p.key] = { w: "", y: "" }; });
-  return o;
+function emptyTireDate() { return { w: "", y: "" }; }
+function copyTireDate(src) {
+  return src ? { w: String(src.w || ""), y: String(src.y || "") } : emptyTireDate();
 }
-function copyTireDates(src) {
-  var o = emptyTireDates();
-  if (src) TIRE_POSITIONS.forEach(function (p) {
-    if (src[p.key]) o[p.key] = { w: String(src[p.key].w || ""), y: String(src[p.key].y || "") };
+// Records saved with v1.1 had one date per tire (tireDates). Use the oldest one.
+function legacyTireDate(td) {
+  if (!td) return null;
+  var best = null, bestD = null;
+  Object.keys(td).forEach(function (k) {
+    if (k === "spare") return;
+    var d = tireDateOf(td[k]);
+    if (d && (!bestD || d < bestD)) { best = td[k]; bestD = d; }
   });
-  return o;
+  return best;
+}
+function recordTireDate(r) {
+  if (!r) return null;
+  var d = tireDateOf(r.tireDate);
+  if (d) return { t: r.tireDate, d: d };
+  var lg = legacyTireDate(r.tireDates);
+  d = tireDateOf(lg);
+  return d ? { t: lg, d: d } : null;
 }
 function tireDatesVisible() { return !TIRE_DATE_ADMIN_ONLY || state.adminUnlocked; }
 function normTireYear(y) {
@@ -403,10 +407,6 @@ function tireDateOf(t) {
   var jan4 = new Date(y, 0, 4);
   var dow = (jan4.getDay() + 6) % 7;
   return new Date(y, 0, 4 - dow + (w - 1) * 7);
-}
-function hasTireDates(td) {
-  if (!td) return false;
-  return TIRE_POSITIONS.some(function (p) { return !!tireDateOf(td[p.key]); });
 }
 function fmtTireDot(t) {
   return ltrIsolate(String(parseInt(t.w, 10)).padStart(2, "0") + " / " + normTireYear(t.y));
@@ -426,41 +426,31 @@ function tireAgeColor(d) {
   if (yrs >= TIRE_AGE_WARN_YEARS) return "#FF9F0A";
   return "#30D158";
 }
-// Returns an Arabic error message, or "" when everything filled in is valid.
-function validateTireDates(td) {
-  if (!td) return "";
-  for (var i = 0; i < TIRE_POSITIONS.length; i++) {
-    var p = TIRE_POSITIONS[i], t = td[p.key] || {};
-    var w = String(t.w || "").trim(), y = String(t.y || "").trim();
-    if (!w && !y) continue;
-    if (!w || !y) return "بيانات إطار (" + p.label + ") ناقصة: أدخل الأسبوع والسنة معًا";
-    var wn = parseInt(w, 10);
-    if (isNaN(wn) || wn < 1 || wn > 53) return "أسبوع صنع الإطار (" + p.label + ") يجب أن يكون بين 1 و 53";
-    var yn = normTireYear(y), d = tireDateOf(t);
-    if (isNaN(yn) || yn < 1990 || !d || d.getTime() > Date.now() + 14 * 86400000) return "سنة صنع الإطار (" + p.label + ") غير صحيحة";
-  }
+// Returns an Arabic error message, or "" when empty/valid.
+function validateTireDate(t) {
+  if (!t) return "";
+  var w = String(t.w || "").trim(), y = String(t.y || "").trim();
+  if (!w && !y) return "";
+  if (!w || !y) return "بيانات تاريخ صنع الإطار ناقصة: أدخل الأسبوع والسنة معًا";
+  var wn = parseInt(w, 10);
+  if (isNaN(wn) || wn < 1 || wn > 53) return "أسبوع صنع الإطار يجب أن يكون بين 1 و 53";
+  var yn = normTireYear(y), d = tireDateOf(t);
+  if (isNaN(yn) || yn < 1990 || !d || d.getTime() > Date.now() + 14 * 86400000) return "سنة صنع الإطار غير صحيحة";
   return "";
 }
-// Per car: oldest/newest MOUNTED tire (spare excluded), from the car's latest
-// inspection that has tire dates recorded.
+// Per car: tire date from the car's latest inspection that has one recorded.
 function getTireSummaries() {
   var best = {};
   Object.keys(inspectionsCache).forEach(function (id) {
     var r = inspectionsCache[id];
-    if (!r || !r.carCode || !r.tireDates) return;
+    if (!r || !r.carCode) return;
     var t = r.dateTime ? new Date(r.dateTime).getTime() : NaN;
     if (isNaN(t)) return;
-    var dates = [];
-    TIRE_POSITIONS.forEach(function (p) {
-      if (p.key === "spare") return;
-      var d = tireDateOf(r.tireDates[p.key]);
-      if (d) dates.push(d);
-    });
-    if (!dates.length) return;
+    var rt = recordTireDate(r);
+    if (!rt) return;
     var code = r.carCode.trim();
     if (best[code] && best[code].time >= t) return;
-    dates.sort(function (a, b) { return a - b; });
-    best[code] = { time: t, id: r.id, oldest: dates[0], newest: dates[dates.length - 1] };
+    best[code] = { time: t, id: r.id, t: rt.t, d: rt.d };
   });
   return best;
 }
@@ -894,21 +884,17 @@ var I18N_EXACT = {
   "أخرى (Other)": "Other",
   "أدوات الرفع": "Lift Tools",
   "الإطار الاحتياطي": "Spare Tire",
-  "تاريخ صنع الإطارات": "Tire Manufacture Dates",
+  "تاريخ صنع الإطار": "Tire Manufacture Date",
   "أسبوع": "Week",
   "سنة": "Year",
-  "أمامي يمين": "Front Right",
-  "أمامي يسار": "Front Left",
-  "خلفي يمين": "Rear Right",
-  "خلفي يسار": "Rear Left",
-  "الاحتياطي": "Spare",
   "اختياري. تلاقي الرقم على جدار الإطار بعد كلمة DOT — آخر 4 أرقام: أول رقمين = الأسبوع، آخر رقمين = السنة (مثال 2319 = أسبوع 23 سنة 2019)": "Optional. Find it on the tire sidewall after \"DOT\" — last 4 digits: first two = week, last two = year (e.g. 2319 = week 23 of 2019)",
+  "بيانات تاريخ صنع الإطار ناقصة: أدخل الأسبوع والسنة معًا": "Tire date incomplete: enter both week and year",
+  "أسبوع صنع الإطار يجب أن يكون بين 1 و 53": "Tire week must be between 1 and 53",
+  "سنة صنع الإطار غير صحيحة": "Tire manufacture year is not valid",
   "أعمار الإطارات": "Tire Ages",
-  "ترتيب كل السيارات حسب أقدم إطار مركّب فيها، من آخر فحص سُجّل فيه تاريخ صنع الإطارات. الاحتياطي غير محسوب. اكبس على السيارة لفتح ذلك الفحص.": "All vehicles ranked by their oldest mounted tire, from the latest inspection that recorded tire dates. Spare not counted. Tap a vehicle to open that inspection.",
+  "ترتيب كل السيارات حسب تاريخ صنع إطاراتها، من آخر فحص سُجّل فيه تاريخ الإطار. اكبس على السيارة لفتح ذلك الفحص.": "All vehicles ranked by tire manufacture date, from the latest inspection that recorded it. Tap a vehicle to open that inspection.",
   "الأقدم ← الأحدث": "Oldest ← Newest",
   "الأحدث ← الأقدم": "Newest ← Oldest",
-  "أقدم إطار": "Oldest tire",
-  "أحدث إطار": "Newest tire",
   "الأقدم": "Oldest",
   "الأحدث": "Newest",
   "أحمر: 6 سنوات فأكثر — برتقالي: 4 سنوات فأكثر": "Red: 6+ years — Orange: 4+ years",
@@ -937,9 +923,6 @@ var I18N_REGEX = [
   [/^(\d+) سنة و (\d+) شهر$/, function (m) { return m[1] + "y " + m[2] + "m"; }],
   [/^(\d+) سنة$/, function (m) { return m[1] + "y"; }],
   [/^(\d+) شهر$/, function (m) { return m[1] + "m"; }],
-  [/^بيانات إطار \((.+)\) ناقصة: أدخل الأسبوع والسنة معًا$/, function (m) { return "Tire (" + m[1] + ") data incomplete: enter both week and year"; }],
-  [/^أسبوع صنع الإطار \((.+)\) يجب أن يكون بين 1 و 53$/, function (m) { return "Tire (" + m[1] + ") week must be between 1 and 53"; }],
-  [/^سنة صنع الإطار \((.+)\) غير صحيحة$/, function (m) { return "Tire (" + m[1] + ") manufacture year is not valid"; }],
   [/^قائمة المركبات \((\d+)\)$/, function (m) { return "Vehicle List (" + m[1] + ")"; }],
   [/^الأدمنز الحاليين \((\d+)\)$/, function (m) { return "Current Admins (" + m[1] + ")"; }],
   [/^طباعة \/ حفظ فحوصات هذا اليوم \((\d+)\)$/, function (m) { return "Print / Save Today's Inspections (" + m[1] + ")"; }],
@@ -1081,7 +1064,7 @@ function freshDraft() {
     damages: [],
     selectedType: "D",
     tireNotes: "",
-    tireDates: emptyTireDates(),
+    tireDate: emptyTireDate(),
     mechanicNotes: "",
     equipment: emptyChecklistFor(EQUIPMENT_ITEMS),
     equipmentOtherText: "",
@@ -1229,13 +1212,10 @@ function renderReport(record) {
   var placeLine = record.place + (record.placeNote ? " — " + escapeHtml(record.placeNote) : "");
 
   var tireDatesPrintHtml = "";
-  if (tireDatesVisible() && hasTireDates(record.tireDates)) {
-    tireDatesPrintHtml = '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">تاريخ صنع الإطارات</div>' +
-      '<div class="vi-info-grid" style="display:grid;grid-template-columns:1fr;gap:0 20px;">' +
-      TIRE_POSITIONS.map(function (p) {
-        var t = record.tireDates[p.key];
-        return tireDateOf(t) ? cell(p.label, fmtTireDot(t)) : "";
-      }).join("") + "</div>";
+  var rtPrint = recordTireDate(record);
+  if (tireDatesVisible() && rtPrint) {
+    tireDatesPrintHtml = '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">تاريخ صنع الإطار</div>' +
+      '<div style="font-size:12.5px;font-weight:600;line-height:1.6;">' + fmtTireDot(rtPrint.t) + "</div>";
   }
 
   return '<style>' +
@@ -1653,7 +1633,7 @@ function renderTireAgeSection() {
   vehiclesCache.slice().sort().forEach(function (code) {
     if (summaries[code]) withData.push({ code: code, s: summaries[code] }); else noData.push(code);
   });
-  withData.sort(function (a, b) { return a.s.oldest - b.s.oldest; }); // oldest first
+  withData.sort(function (a, b) { return a.s.d - b.s.d; }); // oldest first
   var oldestCode = withData.length ? withData[0].code : null;
   var newestCode = withData.length ? withData[withData.length - 1].code : null;
   if (state.tireSortDir === "newest") withData.reverse();
@@ -1665,18 +1645,17 @@ function renderTireAgeSection() {
     var b = "";
     if (withData.length > 1 && r.code === oldestCode) b = badge("الأقدم", "#FF453A");
     else if (withData.length > 1 && r.code === newestCode) b = badge("الأحدث", "#30D158");
-    function dot(d) { return ltrIsolate(String(d.getMonth() + 1).padStart(2, "0") + " / " + d.getFullYear()); }
     return '<div data-action="open-detail" data-id="' + r.s.id + '" style="background:#1C1C1E;border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;">' +
-      '<div style="min-width:0;"><div style="display:flex;align-items:center;gap:8px;"><span style="color:#FFFFFF;font-size:13.5px;font-weight:700;">' + escapeHtml(r.code) + "</span>" + b + "</div>" +
-      '<div style="color:#8E8E93;font-size:11.5px;margin-top:3px;"><span>أقدم إطار</span> <span>' + dot(r.s.oldest) + '</span> · <span>أحدث إطار</span> <span>' + dot(r.s.newest) + "</span></div></div>" +
-      '<span style="color:' + tireAgeColor(r.s.oldest) + ';font-size:12.5px;font-weight:700;flex-shrink:0;">' + formatTireAge(r.s.oldest) + "</span></div>";
+      '<div style="display:flex;align-items:center;gap:8px;"><span style="color:#FFFFFF;font-size:13.5px;font-weight:700;">' + escapeHtml(r.code) + "</span>" + b + "</div>" +
+      '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;"><span style="color:#8E8E93;font-size:12px;">' + fmtTireDot(r.s.t) + "</span>" +
+      '<span style="color:' + tireAgeColor(r.s.d) + ';font-size:12.5px;font-weight:700;">' + formatTireAge(r.s.d) + "</span></div></div>";
   }).join("");
   var noDataHtml = noData.length
     ? '<div style="color:#8E8E93;font-size:12px;margin-top:12px;"><b style="color:#FFFFFF;">' + noData.length + "</b> <span>سيارات بدون بيانات إطارات</span>: " +
       noData.map(escapeHtml).join("، ") + "</div>"
     : "";
   return '<div class="section"><div class="section-title">أعمار الإطارات</div>' +
-    '<div style="color:#8E8E93;font-size:12px;margin-bottom:6px;line-height:1.6;">ترتيب كل السيارات حسب أقدم إطار مركّب فيها، من آخر فحص سُجّل فيه تاريخ صنع الإطارات. الاحتياطي غير محسوب. اكبس على السيارة لفتح ذلك الفحص.</div>' +
+    '<div style="color:#8E8E93;font-size:12px;margin-bottom:6px;line-height:1.6;">ترتيب كل السيارات حسب تاريخ صنع إطاراتها، من آخر فحص سُجّل فيه تاريخ الإطار. اكبس على السيارة لفتح ذلك الفحص.</div>' +
     '<div style="color:#636366;font-size:11.5px;margin-bottom:10px;">أحمر: ' + TIRE_AGE_DANGER_YEARS + ' سنوات فأكثر — برتقالي: ' + TIRE_AGE_WARN_YEARS + " سنوات فأكثر</div>" +
     (withData.length
       ? '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">' +
@@ -1787,17 +1766,13 @@ function renderDriverIdentityBlock() {
 
 function renderTireDatesInput(d) {
   if (!tireDatesVisible()) return "";
-  var rows = TIRE_POSITIONS.map(function (p) {
-    var t = (d.tireDates && d.tireDates[p.key]) || { w: "", y: "" };
-    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
-      '<span style="width:78px;flex-shrink:0;font-size:12.5px;color:#FFFFFF;">' + p.label + "</span>" +
-      '<input class="input" data-tire="' + p.key + '" data-part="w" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="أسبوع" value="' + escapeHtml(t.w) + '" style="flex:1;min-width:0;text-align:center;" />' +
-      '<input class="input" data-tire="' + p.key + '" data-part="y" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="سنة" value="' + escapeHtml(t.y) + '" style="flex:1;min-width:0;text-align:center;" />' +
-      "</div>";
-  }).join("");
-  return '<div class="section"><div class="section-title">تاريخ صنع الإطارات</div>' +
+  var t = d.tireDate || { w: "", y: "" };
+  return '<div class="section"><div class="section-title">تاريخ صنع الإطار</div>' +
     '<div style="color:#8E8E93;font-size:11.5px;line-height:1.6;margin-bottom:10px;">اختياري. تلاقي الرقم على جدار الإطار بعد كلمة DOT — آخر 4 أرقام: أول رقمين = الأسبوع، آخر رقمين = السنة (مثال 2319 = أسبوع 23 سنة 2019)</div>' +
-    rows + "</div>";
+    '<div style="display:flex;gap:8px;">' +
+    '<input class="input" data-tire="d" data-part="w" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="أسبوع" value="' + escapeHtml(t.w) + '" style="flex:1;min-width:0;text-align:center;" />' +
+    '<input class="input" data-tire="d" data-part="y" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="سنة" value="' + escapeHtml(t.y) + '" style="flex:1;min-width:0;text-align:center;" />' +
+    "</div></div>";
 }
 
 function renderInspectionFields(d) {
@@ -1901,16 +1876,12 @@ function renderNew() {
 }
 
 function renderTireDatesDetail(record) {
-  if (!tireDatesVisible() || !hasTireDates(record.tireDates)) return "";
-  var rows = TIRE_POSITIONS.map(function (p) {
-    var t = record.tireDates[p.key], dt = tireDateOf(t);
-    if (!dt) return "";
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #2C2C2E;">' +
-      '<span style="color:#8E8E93;font-size:12px;">' + p.label + "</span>" +
-      '<span style="display:flex;align-items:center;gap:8px;"><span style="color:#FFFFFF;font-size:13px;">' + fmtTireDot(t) + "</span>" +
-      '<span style="color:' + tireAgeColor(dt) + ';font-size:11px;">' + formatTireAge(dt) + "</span></span></div>";
-  }).join("");
-  return '<div class="section"><div class="section-title">تاريخ صنع الإطارات</div>' + rows + "</div>";
+  var rt = recordTireDate(record);
+  if (!tireDatesVisible() || !rt) return "";
+  return '<div class="section"><div class="section-title">تاريخ صنع الإطار</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;">' +
+    '<span style="color:#FFFFFF;font-size:13px;">' + fmtTireDot(rt.t) + "</span>" +
+    '<span style="color:' + tireAgeColor(rt.d) + ';font-size:12px;">' + formatTireAge(rt.d) + "</span></div></div>";
 }
 
 function renderDetail() {
@@ -2455,7 +2426,7 @@ function loadAdminEditDraft(record) {
     damages: (record.damages || []).map(function (m) { return Object.assign({}, m); }),
     selectedType: "D",
     tireNotes: record.tireNotes || "",
-    tireDates: copyTireDates(record.tireDates),
+    tireDate: copyTireDate(record.tireDate || legacyTireDate(record.tireDates)),
     mechanicNotes: record.mechanicNotes || "",
     equipment: Object.assign(emptyChecklistFor(EQUIPMENT_ITEMS), record.equipment || {}),
     equipmentOtherText: "",
@@ -2490,7 +2461,7 @@ function saveAdminEditReport() {
       return;
     }
   }
-  var tireErrEdit = validateTireDates(d.tireDates);
+  var tireErrEdit = validateTireDate(d.tireDate);
   if (tireErrEdit) { d.errorMsg = tireErrEdit; render(); return; }
   commitOtherItem("equipment");
   commitOtherItem("documents");
@@ -2505,7 +2476,7 @@ function saveAdminEditReport() {
     dateTime: d.dateTime,
     damages: d.damages,
     tireNotes: d.tireNotes.trim(),
-    tireDates: d.tireDates,
+    tireDate: d.tireDate,
     mechanicNotes: d.mechanicNotes.trim(),
     equipment: d.equipment,
     equipmentOtherItems: d.equipmentOtherItems,
@@ -2602,7 +2573,7 @@ function buildRecord() {
     dateTime: draft.dateTime,
     damages: draft.damages,
     tireNotes: draft.tireNotes.trim(),
-    tireDates: draft.tireDates,
+    tireDate: draft.tireDate,
     mechanicNotes: draft.mechanicNotes.trim(),
     equipment: draft.equipment,
     equipmentOtherItems: draft.equipmentOtherItems,
@@ -2677,7 +2648,7 @@ function saveInspection() {
     }
   }
 
-  var tireErr = validateTireDates(draft.tireDates);
+  var tireErr = validateTireDate(draft.tireDate);
   if (tireErr) { draft.errorMsg = tireErr; render(); return; }
 
   draft.errorMsg = "";
@@ -2980,12 +2951,11 @@ document.addEventListener("DOMContentLoaded", function () {
       if (mark) mark.note = t.value;
       return;
     }
-    var tireKey = t.dataset.tire;
-    if (tireKey) {
+    if (t.dataset.tire) {
       var part = t.dataset.part === "y" ? "y" : "w";
       t.value = t.value.replace(/[\u0660-\u0669]/g, function (c) { return String(c.charCodeAt(0) - 0x0660); }).replace(/[^0-9]/g, "").slice(0, part === "y" ? 4 : 2);
       var tdAd = activeDraft();
-      if (tdAd && tdAd.tireDates && tdAd.tireDates[tireKey]) tdAd.tireDates[tireKey][part] = t.value;
+      if (tdAd && tdAd.tireDate) tdAd.tireDate[part] = t.value;
       return;
     }
     var field = t.dataset.field;
