@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta name="theme-color" content="#000000" />
-<meta name="app-version" content="1.2 (2026-10-27)" />
+<meta name="app-version" content="1.4 (2026-10-27)" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -102,8 +102,10 @@
    1.1  2026-10-27  تاريخ صنع الإطارات + ترتيب السيارات حسب عمر الإطارات
                     (للأدمن) + رقم الإصدار
    1.2  2026-10-27  تاريخ صنع الإطار صار خانة واحدة للسيارة (أسبوع/سنة)
+   1.3  2026-10-27  قسم "إضاءة المركبة الكاملة" (تشيك بوكس + ملاحظات) تحت ملاحظات الإطارات
+   1.4  2026-10-27  قسم "حالة المساحات" (ممتاز / جيد / بحاجة لتبديل) تحت الإضاءة
 ================================================================= */
-var APP_VERSION = "1.2";
+var APP_VERSION = "1.4";
 var APP_VERSION_DATE = "2026-10-27";
 try { console.info("Vehicle Inspection app v" + APP_VERSION + " (" + APP_VERSION_DATE + ")"); } catch (e) {}
 
@@ -124,6 +126,15 @@ var TIRE_DATE_ADMIN_ONLY = false;
 // Colour thresholds (years) used in the admin tire-age ranking.
 var TIRE_AGE_WARN_YEARS = 4;
 var TIRE_AGE_DANGER_YEARS = 6;
+
+var WIPER_OPTIONS = [
+  { key: "excellent", label: "ممتاز", color: "#30D158" },
+  { key: "good", label: "جيد", color: "#0A84FF" },
+  { key: "replace", label: "بحاجة لتبديل", color: "#FF453A" }
+];
+function wiperOption(key) {
+  return WIPER_OPTIONS.filter(function (o) { return o.key === key; })[0] || null;
+}
 
 var EQUIPMENT_ITEMS = [
   { key: "liftTools", label: "أدوات الرفع" },
@@ -453,6 +464,9 @@ function getTireSummaries() {
     best[code] = { time: t, id: r.id, t: rt.t, d: rt.d };
   });
   return best;
+}
+function hasLighting(r) {
+  return !!r && (typeof r.lightingOk === "boolean" || !!r.lightingNotes);
 }
 function appVersionLabel() {
   var p = APP_VERSION_DATE.split("-");
@@ -885,6 +899,13 @@ var I18N_EXACT = {
   "أدوات الرفع": "Lift Tools",
   "الإطار الاحتياطي": "Spare Tire",
   "تاريخ صنع الإطار": "Tire Manufacture Date",
+  "إضاءة المركبة الكاملة": "Full Vehicle Lighting",
+  "حالة المساحات": "Wipers Condition",
+  "ممتاز": "Excellent",
+  "جيد": "Good",
+  "بحاجة لتبديل": "Needs Replacement",
+  "الإضاءة كاملة وسليمة": "All lights complete and working",
+  "ملاحظات على الإضاءة (إن وجدت): مصباح محروق، إشارة، ضباب...": "Lighting notes (if any): burnt bulb, indicator, fog light...",
   "أسبوع": "Week",
   "سنة": "Year",
   "اختياري. تلاقي الرقم على جدار الإطار بعد كلمة DOT — آخر 4 أرقام: أول رقمين = الأسبوع، آخر رقمين = السنة (مثال 2319 = أسبوع 23 سنة 2019)": "Optional. Find it on the tire sidewall after \"DOT\" — last 4 digits: first two = week, last two = year (e.g. 2319 = week 23 of 2019)",
@@ -1065,6 +1086,9 @@ function freshDraft() {
     selectedType: "D",
     tireNotes: "",
     tireDate: emptyTireDate(),
+    lightingOk: false,
+    lightingNotes: "",
+    wipers: "",
     mechanicNotes: "",
     equipment: emptyChecklistFor(EQUIPMENT_ITEMS),
     equipmentOtherText: "",
@@ -1218,6 +1242,19 @@ function renderReport(record) {
       '<div style="font-size:12.5px;font-weight:600;line-height:1.6;">' + fmtTireDot(rtPrint.t) + "</div>";
   }
 
+  var lightingPrintHtml = "";
+  if (hasLighting(record)) {
+    lightingPrintHtml = '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">إضاءة المركبة الكاملة</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.5;"><span>' + (record.lightingOk ? "✔" : "✕") + "</span><span>الإضاءة كاملة وسليمة</span></div>" +
+      '<div style="font-size:12.5px;line-height:1.6;margin-top:6px;color:' + (record.lightingNotes ? "#16181C" : "#555") + ';">' + escapeHtml(record.lightingNotes || "لا توجد ملاحظات") + "</div>";
+  }
+
+  var wipersPrintHtml = "";
+  if (wiperOption(record.wipers)) {
+    wipersPrintHtml = '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">حالة المساحات</div>' +
+      '<div style="font-size:12.5px;font-weight:600;line-height:1.6;">' + wiperOption(record.wipers).label + "</div>";
+  }
+
   return '<style>' +
     '@media print, screen and (min-width: 480px) {' +
     '  .vi-report-card .vi-info-grid { grid-template-columns: 1fr 1fr !important; }' +
@@ -1252,6 +1289,8 @@ function renderReport(record) {
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">ملاحظات على الإطارات</div>' +
     '<div style="font-size:12.5px;line-height:1.6;color:' + (record.tireNotes ? "#16181C" : "#555") + ';">' + escapeHtml(record.tireNotes || "لا توجد ملاحظات") + "</div>" +
 
+    lightingPrintHtml +
+    wipersPrintHtml +
     '<div style="font-size:13px;font-weight:700;margin:18px 0 9px;">ملاحظات على الميكانيك / غرفة السائق والركاب</div>' +
     '<div style="font-size:12.5px;line-height:1.6;color:' + (record.mechanicNotes ? "#16181C" : "#555") + ';">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div>" +
 
@@ -1804,6 +1843,20 @@ function renderInspectionFields(d) {
     '<div class="section"><div class="section-title">ملاحظات على الإطارات</div>' +
     '<textarea class="input" data-field="tireNotes" rows="3" style="resize:none;" placeholder="أي ملاحظات عن الإطارات (نوع، حالة، ضغط هواء، تآكل...)">' + escapeHtml(d.tireNotes) + "</textarea></div>" +
 
+    '<div class="section"><div class="section-title">إضاءة المركبة الكاملة</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;" data-action="toggle-lighting">' +
+    '<span class="chk-box' + (d.lightingOk ? " on" : "") + '">' + (d.lightingOk ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + "</span>" +
+    '<span style="font-size:13px;color:#FFFFFF;">الإضاءة كاملة وسليمة</span></div>' +
+    '<textarea class="input" data-field="lightingNotes" rows="2" style="resize:none;" placeholder="ملاحظات على الإضاءة (إن وجدت): مصباح محروق، إشارة، ضباب...">' + escapeHtml(d.lightingNotes) + "</textarea></div>" +
+
+    '<div class="section"><div class="section-title">حالة المساحات</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">' +
+    WIPER_OPTIONS.map(function (o) {
+      var sel = d.wipers === o.key;
+      return '<button type="button" class="type-btn" data-action="set-wipers" data-key="' + o.key + '" style="padding:12px 4px;border:' + (sel ? "2px solid " + o.color : "1px solid #38383A") + ";background:" + (sel ? o.color + "26" : "#2C2C2E") + ';">' +
+        '<span style="font-size:13px;font-weight:700;color:' + (sel ? o.color : "#FFFFFF") + ';">' + o.label + "</span></button>";
+    }).join("") + "</div></div>" +
+
     '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div>' +
     '<textarea class="input" data-field="mechanicNotes" rows="3" style="resize:none;" placeholder="أي ملاحظات ميكانيكية، أو داخل المقصورة (مقاعد، ديكور، رائحة، أعطال...)">' + escapeHtml(d.mechanicNotes) + "</textarea></div>" +
 
@@ -1930,6 +1983,14 @@ function renderDetail() {
     '<div class="section"><div class="section-title">حالة الهيكل</div>' + renderLegend() + renderCarDiagram(damages, { editable: false, theme: "dark" }) + damagesHtml + "</div>" +
     renderTireDatesDetail(record) +
     '<div class="section"><div class="section-title">ملاحظات على الإطارات</div><div style="color:' + (record.tireNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.tireNotes || "لا توجد ملاحظات") + "</div></div>" +
+    (hasLighting(record)
+      ? '<div class="section"><div class="section-title">إضاءة المركبة الكاملة</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span class="chk-box' + (record.lightingOk ? " on" : "") + '">' + (record.lightingOk ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : "") + '</span><span style="font-size:13px;color:#FFFFFF;">الإضاءة كاملة وسليمة</span></div>' +
+        '<div style="color:' + (record.lightingNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.lightingNotes || "لا توجد ملاحظات") + "</div></div>"
+      : "") +
+    (wiperOption(record.wipers)
+      ? '<div class="section"><div class="section-title">حالة المساحات</div><span style="font-size:13px;font-weight:700;color:' + wiperOption(record.wipers).color + ';">' + wiperOption(record.wipers).label + "</span></div>"
+      : "") +
     '<div class="section"><div class="section-title">ملاحظات على الميكانيك أو غرفة السائق والركاب</div><div style="color:' + (record.mechanicNotes ? "#FFFFFF" : "#8E8E93") + ';font-size:13px;line-height:1.6;">' + escapeHtml(record.mechanicNotes || "لا توجد ملاحظات") + "</div></div>" +
     '<div class="section"><div class="section-title">التجهيزات</div>' + equipmentHtml2 + (otherItemsOf(record, "equipment").length ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(otherItemsOf(record, "equipment").join("، ")) + "</div>" : "") + "</div>" +
     '<div class="section"><div class="section-title">الوثائق</div>' + documentsHtml2 + (otherItemsOf(record, "documents").length ? '<div style="margin-top:8px;font-size:13px;color:#8E8E93;">أخرى: ' + escapeHtml(otherItemsOf(record, "documents").join("، ")) + "</div>" : "") + "</div>" +
@@ -2427,6 +2488,9 @@ function loadAdminEditDraft(record) {
     selectedType: "D",
     tireNotes: record.tireNotes || "",
     tireDate: copyTireDate(record.tireDate || legacyTireDate(record.tireDates)),
+    lightingOk: record.lightingOk === true,
+    lightingNotes: record.lightingNotes || "",
+    wipers: record.wipers || "",
     mechanicNotes: record.mechanicNotes || "",
     equipment: Object.assign(emptyChecklistFor(EQUIPMENT_ITEMS), record.equipment || {}),
     equipmentOtherText: "",
@@ -2477,6 +2541,9 @@ function saveAdminEditReport() {
     damages: d.damages,
     tireNotes: d.tireNotes.trim(),
     tireDate: d.tireDate,
+    lightingOk: !!d.lightingOk,
+    lightingNotes: (d.lightingNotes || "").trim(),
+    wipers: d.wipers || "",
     mechanicNotes: d.mechanicNotes.trim(),
     equipment: d.equipment,
     equipmentOtherItems: d.equipmentOtherItems,
@@ -2574,6 +2641,9 @@ function buildRecord() {
     damages: draft.damages,
     tireNotes: draft.tireNotes.trim(),
     tireDate: draft.tireDate,
+    lightingOk: !!draft.lightingOk,
+    lightingNotes: (draft.lightingNotes || "").trim(),
+    wipers: draft.wipers || "",
     mechanicNotes: draft.mechanicNotes.trim(),
     equipment: draft.equipment,
     equipmentOtherItems: draft.equipmentOtherItems,
@@ -2837,6 +2907,8 @@ document.addEventListener("DOMContentLoaded", function () {
       if (idx === -1) state.compareSelectedCars.push(code); else state.compareSelectedCars.splice(idx, 1);
       render();
     }
+    else if (action === "set-wipers") { var adWp = activeDraft(); adWp.wipers = adWp.wipers === t.dataset.key ? "" : t.dataset.key; render(); }
+    else if (action === "toggle-lighting") { var adLt = activeDraft(); adLt.lightingOk = !adLt.lightingOk; render(); }
     else if (action === "toggle-tire-sort") { state.tireSortDir = state.tireSortDir === "oldest" ? "newest" : "oldest"; render(true); }
     else if (action === "toggle-compare-sort") { state.compareSortDir = state.compareSortDir === "desc" ? "asc" : "desc"; render(); }
     else if (action === "select-compare-group") {
